@@ -13,6 +13,7 @@
       --line:#1b2a3f;
       --danger:#ff5a6a;
       --ok:#63e6be;
+      --star:#ffd166;
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
     }
@@ -28,7 +29,7 @@
     .wrap{max-width:860px;margin:0 auto;padding:14px 12px 36px}
     header{display:flex;gap:10px;align-items:baseline;justify-content:space-between;margin:6px 0 10px}
     h1{margin:0;font-size:16px;letter-spacing:.2px}
-    .hint{color:var(--muted);font-size:11px}
+    .hint{color:var(--muted);font-size:11px;line-height:1.25}
     .kbd{font-family:var(--mono);border:1px solid var(--line);padding:0 5px;border-radius:8px;background:#0c1320;color:var(--text)}
 
     .bar{
@@ -41,7 +42,7 @@
       backdrop-filter: blur(8px);
     }
     textarea#input{
-      flex:1 1 360px;
+      flex:1 1 340px;
       min-height:40px;
       max-height:120px;
       resize:vertical;
@@ -74,8 +75,21 @@
     .btn:active{transform:translateY(1px)}
     .btn.primary{border-color:#2a68ff66; background:#0d1a2b}
     .btn.danger{border-color:#ff5a6a55;color:#ffd1d6}
+
     .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
     .small{font-size:11px;color:var(--muted)}
+
+    .toggle{
+      display:flex;align-items:center;gap:6px;
+      padding:6px 8px;
+      border:1px solid var(--line);
+      background:#0c1320;
+      border-radius:12px;
+      font-size:11px;
+      color:var(--text);
+      user-select:none;
+    }
+    .toggle input{accent-color: var(--accent); width:14px; height:14px; margin:0}
 
     .log{
       margin-top:8px;
@@ -120,7 +134,7 @@
       opacity:.92;
     }
 
-    /* Wrapped messages (as requested) */
+    /* Wrapped messages */
     .msg{
       white-space:pre-wrap;
       word-break:break-word;
@@ -128,7 +142,7 @@
       flex:1;
     }
 
-    /* Actions always visible, but tiny */
+    /* Actions always visible, tiny */
     .actions{
       display:flex;
       gap:3px;
@@ -162,6 +176,12 @@
     .iconbtn.ok{border-color:rgba(99,230,190,.45)}
     .iconbtn.ok svg{stroke:var(--ok)}
 
+    /* Star styling */
+    .iconbtn.star{border-color:rgba(255,209,102,.28)}
+    .iconbtn.star svg{stroke:var(--star)}
+    .iconbtn.star.on{border-color:rgba(255,209,102,.55)}
+    .iconbtn.star.on svg{fill:rgba(255,209,102,.9); stroke:rgba(255,209,102,1)}
+
     .editbox{
       width:100%;
       padding:6px 8px;
@@ -185,7 +205,6 @@
       .wrap{padding:12px 10px 30px}
       textarea#input{font-size:16px}
       header{flex-direction:column;gap:5px;align-items:flex-start}
-      .hint{line-height:1.25}
       .btn{padding:8px 9px}
       .entry{padding:4px 6px;font-size:11.5px}
       .day{padding:4px 6px}
@@ -201,16 +220,30 @@
       <h1>Action Log</h1>
       <div class="hint">
         <span class="kbd">Enter</span> add · <span class="kbd">Shift+Enter</span> newline ·
-        <span class="kbd">Ctrl+/</span> focus · <span class="kbd">Esc</span> cancel edit
+        <span class="kbd">Ctrl+/</span> focus ·
+        <span class="kbd">Ctrl+Alt+T</span> today · <span class="kbd">Ctrl+Alt+S</span> starred ·
+        <span class="kbd">Esc</span> cancel edit · <span class="kbd">Ctrl+Enter</span> save edit
       </div>
     </header>
 
     <div class="bar">
       <textarea id="input" placeholder="Type an action…"></textarea>
+
       <div class="row">
         <button class="btn primary" id="add">Add</button>
         <button class="btn" id="export">Export .txt</button>
         <button class="btn" id="importBtn">Import .txt</button>
+
+        <label class="toggle" title="Show only today's entries (shortcut: Ctrl+Alt+T / Cmd+Option+T)">
+          <input id="todayOnly" type="checkbox" />
+          Today only
+        </label>
+
+        <label class="toggle" title="Show only starred entries (shortcut: Ctrl+Alt+S / Cmd+Option+S)">
+          <input id="starredOnly" type="checkbox" />
+          Starred only
+        </label>
+
         <button class="btn danger" id="clear">Clear</button>
         <input id="file" type="file" accept=".txt,text/plain" style="display:none" />
         <div class="small" id="count"></div>
@@ -226,8 +259,12 @@
 
 <script>
 (() => {
-  const KEY = "actionLog.v2";
-  const OLD_KEYS = ["actionLog.v1"];
+  const KEY = "actionLog.v3"; // v3: starred flag + UI prefs
+  const OLD_KEYS = ["actionLog.v2","actionLog.v1"];
+
+  const UI_TODAY_ONLY   = "actionLog.ui.todayOnly";
+  const UI_STARRED_ONLY = "actionLog.ui.starredOnly";
+
   const $ = (id) => document.getElementById(id);
 
   const input = $("input");
@@ -238,11 +275,17 @@
   const file = $("file");
   const logEl = $("log");
   const countEl = $("count");
+  const todayOnlyEl = $("todayOnly");
+  const starredOnlyEl = $("starredOnly");
 
-  /** @type {{id:string, ts:number, msg:string}[]} */
+  /** @type {{id:string, ts:number, msg:string, starred?:boolean}[]} */
   let items = [];
   /** @type {string|null} */
   let editingId = null;
+
+  // Defaults
+  let todayOnly = true;     // collapse older days by default
+  let starredOnly = false;  // off by default
 
   function pad(n){ return String(n).padStart(2,"0"); }
   function fmtDate(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
@@ -260,12 +303,29 @@
       .map(x => ({
         id: (typeof x.id === "string" && x.id) ? x.id : uid(x.ts || Date.now()),
         ts: Number.isFinite(x.ts) ? x.ts : Date.now(),
-        msg: (x.msg ?? "").toString()
+        msg: (x.msg ?? "").toString(),
+        starred: !!x.starred
       }))
       .filter(x => x.msg.trim().length > 0);
   }
 
-  function load(){
+  function loadUI(){
+    try{
+      const t = localStorage.getItem(UI_TODAY_ONLY);
+      if (t !== null) todayOnly = (t === "1");
+      const s = localStorage.getItem(UI_STARRED_ONLY);
+      if (s !== null) starredOnly = (s === "1");
+    } catch(e){}
+    todayOnlyEl.checked = todayOnly;
+    starredOnlyEl.checked = starredOnly;
+  }
+
+  function saveUI(){
+    localStorage.setItem(UI_TODAY_ONLY, todayOnly ? "1" : "0");
+    localStorage.setItem(UI_STARRED_ONLY, starredOnly ? "1" : "0");
+  }
+
+  function loadData(){
     let raw = localStorage.getItem(KEY);
     if (!raw){
       for (const k of OLD_KEYS){
@@ -279,10 +339,10 @@
     } catch(e){
       items = [];
     }
-    save();
+    saveData(); // finalize into v3
   }
 
-  function save(){
+  function saveData(){
     localStorage.setItem(KEY, JSON.stringify(items));
   }
 
@@ -290,8 +350,8 @@
     const text = (msg ?? "").trim();
     if (!text) return;
     const ts = Date.now();
-    items.push({ id: uid(ts), ts, msg: text });
-    save();
+    items.push({ id: uid(ts), ts, msg: text, starred:false });
+    saveData();
     render();
   }
 
@@ -301,7 +361,15 @@
     const idx = items.findIndex(x => x.id === id);
     if (idx === -1) return false;
     items[idx].msg = text;
-    save();
+    saveData();
+    return true;
+  }
+
+  function toggleStar(id){
+    const idx = items.findIndex(x => x.id === id);
+    if (idx === -1) return false;
+    items[idx].starred = !items[idx].starred;
+    saveData();
     return true;
   }
 
@@ -309,7 +377,7 @@
     const idx = items.findIndex(x => x.id === id);
     if (idx === -1) return false;
     items.splice(idx, 1);
-    save();
+    saveData();
     return true;
   }
 
@@ -334,54 +402,81 @@
     }[c]));
   }
 
+  // Icons
   function iconPencil(){
-    return `
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 20h9"></path>
-        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
-      </svg>`;
+    return `<svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 20h9"></path>
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+    </svg>`;
   }
   function iconTrash(){
-    return `
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M3 6h18"></path>
-        <path d="M8 6V4h8v2"></path>
-        <path d="M19 6l-1 14H6L5 6"></path>
-        <path d="M10 11v6"></path>
-        <path d="M14 11v6"></path>
-      </svg>`;
+    return `<svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M3 6h18"></path>
+      <path d="M8 6V4h8v2"></path>
+      <path d="M19 6l-1 14H6L5 6"></path>
+      <path d="M10 11v6"></path>
+      <path d="M14 11v6"></path>
+    </svg>`;
   }
   function iconCheck(){
-    return `
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M20 6L9 17l-5-5"></path>
-      </svg>`;
+    return `<svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M20 6L9 17l-5-5"></path>
+    </svg>`;
   }
   function iconX(){
-    return `
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M18 6L6 18"></path>
-        <path d="M6 6l12 12"></path>
-      </svg>`;
+    return `<svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M18 6L6 18"></path>
+      <path d="M6 6l12 12"></path>
+    </svg>`;
+  }
+  function iconStar(){
+    return `<svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 17.3l-6.18 3.64 1.64-7.03L2 9.24l7.19-.61L12 2l2.81 6.63 7.19.61-5.46 4.67 1.64 7.03z"></path>
+    </svg>`;
   }
 
-  function render(){
-    countEl.textContent = `${items.length} entr${items.length===1?"y":"ies"}`;
+  function todayYMD(){ return fmtDate(new Date()); }
 
-    if (!items.length){
+  function render(){
+    const total = items.length;
+    const starredCount = items.reduce((a,x)=>a + (x.starred ? 1 : 0), 0);
+    countEl.textContent = `${total} entr${total===1?"y":"ies"} · ${starredCount}★`;
+
+    if (!total){
       logEl.innerHTML = `<div class="empty">No entries yet. Type something above and press Enter.</div>`;
       return;
     }
 
-    const sorted = [...items].sort((a,b)=>a.ts-b.ts);
+    const t = todayYMD();
+    let filtered = items;
+
+    if (starredOnly){
+      filtered = filtered.filter(e => !!e.starred);
+    }
+    if (todayOnly){
+      filtered = filtered.filter(e => fmtDate(new Date(e.ts)) === t);
+    }
+
+    if (!filtered.length){
+      let msg = "No entries match the current filters.";
+      if (todayOnly && starredOnly) msg = "No starred entries for today.";
+      else if (todayOnly) msg = "No entries for today yet.";
+      else if (starredOnly) msg = "No starred entries yet.";
+      logEl.innerHTML = `<div class="empty">${escapeHtml(msg)}</div>`;
+      return;
+    }
+
+    const sorted = [...filtered].sort((a,b)=>a.ts-b.ts);
     const groups = groupByDay(sorted).reverse();
 
     let html = "";
     for (const g of groups){
       const dayCount = g.entries.length;
+      const label = (todayOnly && g.day === t) ? `${g.day} (today)` : g.day;
+
       html += `
         <div class="day">
-          <div>${g.day}</div>
+          <div>${escapeHtml(label)}</div>
           <div>${dayCount} entr${dayCount===1?"y":"ies"}</div>
         </div>
       `;
@@ -398,8 +493,15 @@
               <div class="ts">${escapeHtml(fmtTime(d))}</div>
               <div class="msg">${escapeHtml(e.msg)}</div>
               <div class="actions">
-                <button class="iconbtn" data-action="edit" title="Edit" aria-label="Edit">${iconPencil()}</button>
-                <button class="iconbtn danger" data-action="delete" title="Delete" aria-label="Delete">${iconTrash()}</button>
+                <button class="iconbtn star ${e.starred ? "on" : ""}" data-action="star" title="${e.starred ? "Unstar" : "Star"}">
+                  ${iconStar()}
+                </button>
+                <button class="iconbtn" data-action="edit" title="Edit">
+                  ${iconPencil()}
+                </button>
+                <button class="iconbtn danger" data-action="delete" title="Delete">
+                  ${iconTrash()}
+                </button>
               </div>
             </div>
           `;
@@ -410,8 +512,12 @@
               <div class="msg">
                 <textarea class="editbox" data-role="editbox">${escapeHtml(e.msg)}</textarea>
                 <div class="editrow">
-                  <button class="iconbtn ok" data-action="save" title="Save" aria-label="Save">${iconCheck()}</button>
-                  <button class="iconbtn" data-action="cancel" title="Cancel" aria-label="Cancel">${iconX()}</button>
+                  <button class="iconbtn ok" data-action="save" title="Save">
+                    ${iconCheck()}
+                  </button>
+                  <button class="iconbtn" data-action="cancel" title="Cancel">
+                    ${iconX()}
+                  </button>
                 </div>
               </div>
               <div class="actions"></div>
@@ -434,8 +540,12 @@
   }
 
   function exportTxt(){
+    // Oldest -> newest. Starred lines prefixed with "★ "
     const sorted = [...items].sort((a,b)=>a.ts-b.ts);
-    const lines = sorted.map(e => `${fmtStamp(new Date(e.ts))} - ${e.msg.replace(/\r?\n/g, "\\n")}`);
+    const lines = sorted.map(e => {
+      const starPrefix = e.starred ? "★ " : "";
+      return `${fmtStamp(new Date(e.ts))} - ${starPrefix}${e.msg.replace(/\r?\n/g, "\\n")}`;
+    });
     const blob = new Blob([lines.join("\n") + "\n"], {type:"text/plain;charset=utf-8"});
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -457,21 +567,33 @@
       if (m){
         const [_, ymd, hm, msgRaw] = m;
         const ts = Date.parse(ymd + "T" + hm + ":00");
-        const msg = (msgRaw || "").replace(/\\n/g, "\n").trim();
+
+        let msg = (msgRaw || "").replace(/\\n/g, "\n").trim();
+        let starred = false;
+
+        if (msg.startsWith("★ ")){ starred = true; msg = msg.slice(2).trimStart(); }
+        else if (msg.startsWith("★")){ starred = true; msg = msg.slice(1).trimStart(); }
+
         if (!Number.isNaN(ts) && msg){
-          imported.push({ id: uid(ts), ts, msg });
+          imported.push({ id: uid(ts), ts, msg, starred });
         }
       } else {
-        const msg = line.trim();
+        let msg = line.trim();
+        let starred = false;
+
+        if (msg.startsWith("★ ")){ starred = true; msg = msg.slice(2).trimStart(); }
+        else if (msg.startsWith("★")){ starred = true; msg = msg.slice(1).trimStart(); }
+
         if (msg){
           const ts = now + (offset++);
-          imported.push({ id: uid(ts), ts, msg });
+          imported.push({ id: uid(ts), ts, msg, starred });
         }
       }
     }
     return imported;
   }
 
+  // --- Events ---
   addBtn.addEventListener("click", () => {
     addEntry(input.value);
     input.value = "";
@@ -492,23 +614,30 @@
     const f = file.files && file.files[0];
     file.value = "";
     if (!f) return;
+
     const text = await f.text();
     const imported = parseImportedText(text);
     if (!imported.length){
       alert("No valid lines found to import.");
       return;
     }
+
     items = items.concat(imported);
 
-    const seen = new Set();
-    items = items.filter(e => {
+    // De-dup exact matches (ts + msg) — keep starred if either is starred
+    const map = new Map();
+    for (const e of items){
       const k = e.ts + "|" + e.msg;
-      if (seen.has(k)) return false;
-      seen.add(k);
-      return true;
-    });
+      if (!map.has(k)){
+        map.set(k, e);
+      } else {
+        const prev = map.get(k);
+        prev.starred = !!(prev.starred || e.starred);
+      }
+    }
+    items = Array.from(map.values()).sort((a,b)=>a.ts-b.ts);
 
-    save();
+    saveData();
     render();
   });
 
@@ -517,29 +646,73 @@
     if (!ok) return;
     items = [];
     editingId = null;
-    save();
+    saveData();
     render();
     input.focus();
   });
 
+  todayOnlyEl.addEventListener("change", () => {
+    todayOnly = !!todayOnlyEl.checked;
+    saveUI();
+    render();
+  });
+
+  starredOnlyEl.addEventListener("change", () => {
+    starredOnly = !!starredOnlyEl.checked;
+    saveUI();
+    render();
+  });
+
+  // --- Keyboard shortcuts ---
   document.addEventListener("keydown", (e) => {
     const isMac = navigator.platform.toLowerCase().includes("mac");
     const mod = isMac ? e.metaKey : e.ctrlKey;
+
+    // Ctrl+/ (or Cmd+/) focuses input
     if (mod && e.key === "/"){
       e.preventDefault();
       input.focus();
+      return;
+    }
+
+    // Filter shortcuts: Ctrl+Alt+T / Ctrl+Alt+S (Mac: Cmd+Option+T/S)
+    // We use Alt/Option to avoid browser-reserved combos like Ctrl+S or Ctrl+T.
+    const key = (e.key || "").toLowerCase();
+    if (mod && e.altKey && key === "t"){
+      e.preventDefault();
+      todayOnly = !todayOnly;
+      todayOnlyEl.checked = todayOnly;
+      saveUI();
+      render();
+      return;
+    }
+    if (mod && e.altKey && key === "s"){
+      e.preventDefault();
+      starredOnly = !starredOnly;
+      starredOnlyEl.checked = starredOnly;
+      saveUI();
+      render();
+      return;
     }
   });
 
+  // Actions in list
   logEl.addEventListener("click", (e) => {
     const btn = e.target.closest("button[data-action]");
     if (!btn) return;
+
     const action = btn.getAttribute("data-action");
     const row = btn.closest(".entry");
     if (!row) return;
+
     const id = row.getAttribute("data-id");
     if (!id) return;
 
+    if (action === "star"){
+      toggleStar(id);
+      render();
+      return;
+    }
     if (action === "edit"){
       editingId = id;
       render();
@@ -572,6 +745,7 @@
     }
   });
 
+  // Save edit with Ctrl+Enter (or Cmd+Enter); Esc cancels
   logEl.addEventListener("keydown", (e) => {
     const box = e.target.closest('[data-role="editbox"]');
     if (!box) return;
@@ -584,6 +758,7 @@
       const row = box.closest(".entry");
       const id = row && row.getAttribute("data-id");
       if (!id) return;
+
       const ok = updateEntry(id, box.value);
       if (!ok){
         alert("Entry cannot be empty.");
@@ -600,7 +775,9 @@
     }
   });
 
-  load();
+  // Init
+  loadUI();
+  loadData();
   render();
   input.focus();
 })();
