@@ -166,6 +166,7 @@
       padding:8px;
       box-shadow:0 10px 30px rgba(0,0,0,.25);
       backdrop-filter: blur(8px);
+      align-items:stretch;
     }
     textarea#input{
       flex:1 1 360px;
@@ -202,6 +203,23 @@
     .btn.primary{border-color:#2a68ff66; background:#0d1a2b}
 
     .small{font-size:11px;color:var(--muted);align-self:center}
+
+    /* Mobile CMD button (hidden on desktop) */
+    .cmdMobile{
+      display:none;
+      border-color:rgba(74,163,255,.35);
+      background:rgba(12,19,32,.85);
+      color:var(--accent);
+      font-family:var(--mono);
+      font-weight:600;
+      letter-spacing:.2px;
+      min-width:44px;
+      padding:8px 10px;
+    }
+    .cmdMobile.on{
+      border-color:rgba(74,163,255,.65);
+      box-shadow:0 0 0 3px rgba(74,163,255,.18);
+    }
 
     /* Menu items */
     .menuItem{
@@ -347,6 +365,7 @@
       .wrap{padding:12px 10px 30px}
       textarea#input{font-size:16px}
       .btn{padding:8px 9px}
+      .cmdMobile{display:inline-block} /* show mobile CMD button */
       .entry{padding:4px 6px;font-size:11.5px}
       .day{padding:4px 6px}
       .ts{min-width:50px}
@@ -389,6 +408,12 @@
 
     <div class="bar">
       <textarea id="input" placeholder="Type an action…"></textarea>
+
+      <!-- Mobile command button (shown only on mobile) -->
+      <button class="btn cmdMobile" id="cmdBtnMobile" title="Command mode" aria-label="Command mode">
+        CMD
+      </button>
+
       <button class="btn primary" id="add">Add</button>
       <div class="small" id="count"></div>
     </div>
@@ -434,11 +459,11 @@
       <div class="menuItem">
         <div class="menuLabel">Filters</div>
         <div class="menuRight" style="gap:14px">
-          <label class="menuToggle" title="CMD: Ctrl+; then t">
+          <label class="menuToggle" title="CMD: Ctrl+; then t (or tap CMD on mobile)">
             <input id="todayOnly" type="checkbox" />
             Today
           </label>
-          <label class="menuToggle" title="CMD: Ctrl+; then s">
+          <label class="menuToggle" title="CMD: Ctrl+; then s (or tap CMD on mobile)">
             <input id="starredOnly" type="checkbox" />
             Starred
           </label>
@@ -453,7 +478,8 @@
       </div>
 
       <div class="muted" style="margin-top:10px;">
-        Tip: <span class="kbd">Ctrl</span><span class="kbd">;</span> toggles CMD mode. <span class="kbd">Esc</span> exits.
+        Tip: Desktop: <span class="kbd">Ctrl</span><span class="kbd">;</span> toggles CMD.
+        Mobile: tap <span class="kbd">CMD</span>.
       </div>
     </div>
   </div>
@@ -478,8 +504,15 @@
           <div class="desc">Toggle CMD mode (Mac: Cmd+;)</div>
         </div>
         <div class="rowLine">
+          <div class="keys"><span class="kbd">Mobile</span></div>
+          <div class="desc">Tap <span class="kbd">CMD</span> button</div>
+        </div>
+        <div class="rowLine">
           <div class="keys"><span class="kbd">Esc</span></div>
-          <div class="desc">Exit CMD mode / close panels</div>
+          <div class="desc">Exit CMD / close panels (HW keyboard)</div>
+        </div>
+        <div class="muted" style="margin-top:6px">
+          In CMD mode, type one command key. Invalid keys are ignored.
         </div>
       </div>
 
@@ -515,21 +548,21 @@
 
       <div class="section">
         <div class="sectionTitle">Other</div>
-        <div class="rowLine"><div class="keys"><span class="kbd">Ctrl</span><span class="kbd">/</span></div><div class="desc">Focus input</div></div>
-        <div class="rowLine"><div class="keys"><span class="kbd">Ctrl</span><span class="kbd">Enter</span></div><div class="desc">Save edit</div></div>
+        <div class="rowLine"><div class="keys"><span class="kbd">Ctrl</span><span class="kbd">/</span></div><div class="desc">Focus input (desktop)</div></div>
+        <div class="rowLine"><div class="keys"><span class="kbd">Ctrl</span><span class="kbd">Enter</span></div><div class="desc">Save edit (desktop)</div></div>
       </div>
     </div>
   </div>
 
 <script>
 (() => {
-  const KEY = "actionLog.v6"; // v6: placeholder signifier slot + aligned bullet + fixed action buttons
-  const OLD_KEYS = ["actionLog.v5","actionLog.v4","actionLog.v3","actionLog.v2","actionLog.v1"];
+  const KEY = "actionLog.v7"; // v7: mobile CMD button + fixed action buttons
+  const OLD_KEYS = ["actionLog.v6","actionLog.v5","actionLog.v4","actionLog.v3","actionLog.v2","actionLog.v1"];
   const UI_TODAY_ONLY   = "actionLog.ui.todayOnly";
   const UI_STARRED_ONLY = "actionLog.ui.starredOnly";
 
   // Signifier placeholder (keeps bullet alignment visible)
-  const SIG_PLACEHOLDER = "·"; // visible placeholder (1 char)
+  const SIG_PLACEHOLDER = "·";
 
   // BuJo config (max 1 signifier, fixed-width signifier slot)
   const BUJO = {
@@ -556,6 +589,7 @@
   // Main UI
   const input = $("input");
   const addBtn = $("add");
+  const cmdBtnMobile = $("cmdBtnMobile");
   const countEl = $("count");
   const logEl = $("log");
 
@@ -692,6 +726,61 @@
   helpBtn.addEventListener("click", toggleHelp);
   helpClose.addEventListener("click", closeHelp);
 
+  // ---------- Command mode helpers ----------
+  function setCmdMode(on){
+    cmdMode = on;
+    cmdBadge.classList.toggle("on", on);
+    if (cmdBtnMobile){
+      cmdBtnMobile.classList.toggle("on", on);
+      cmdBtnMobile.textContent = on ? "CMD✓" : "CMD";
+      cmdBtnMobile.setAttribute("aria-pressed", on ? "true" : "false");
+    }
+  }
+
+  function handleCommandKey(key){
+    const k = (key || "").toLowerCase();
+
+    // Panels (only in CMD)
+    if (k === "h"){ toggleHelp(); return true; }
+    if (k === "o"){ toggleMenu(); return true; }
+
+    // Filters (CMD)
+    if (k === "t"){
+      todayOnly = !todayOnly;
+      todayOnlyEl.checked = todayOnly;
+      saveUI();
+      render();
+      return true;
+    }
+    if (k === "s"){
+      starredOnly = !starredOnly;
+      starredOnlyEl.checked = starredOnly;
+      saveUI();
+      render();
+      return true;
+    }
+
+    // BuJo (CMD) - only when a textarea is active
+    if (BUJO.cmd[k]){
+      const ta = getActiveTextArea();
+      if (!ta) return false;
+      const spec = BUJO.cmd[k];
+      applyBujoToActive(spec.kind, spec.value);
+      return true;
+    }
+
+    return false;
+  }
+
+  // Mobile CMD button: tap to toggle CMD mode
+  if (cmdBtnMobile){
+    cmdBtnMobile.addEventListener("click", () => {
+      setCmdMode(!cmdMode);
+      // keep typing in the input
+      input.focus();
+    });
+  }
+
   // ---------- Data ops ----------
   function addEntry(msg){
     const text = (msg ?? "").trim();
@@ -797,11 +886,8 @@
   }
 
   function parsePrefixFixed(line){
-    // Fixed prefix format when prefix exists:
+    // Fixed prefix format:
     // [sig | placeholder][space][bullet][space]rest
-    // Examples:
-    // "* • text"
-    // "· • text"  (placeholder)
     const bulletChars = new Set(Object.values(BUJO.bullets));
     const signSet = new Set(BUJO.signifiers);
 
@@ -809,20 +895,19 @@
 
     const slotChar = line[0];
     const slotOk = (line[1] === " ") && (signSet.has(slotChar) || slotChar === SIG_PLACEHOLDER);
-
     if (!slotOk) return { hasPrefix:false, sig:null, bullet:null, rest:line, prefixLen:0 };
 
     const b = line[2];
     const bOk = bulletChars.has(b) && line[3] === " ";
     if (!bOk) return { hasPrefix:false, sig:null, bullet:null, rest:line, prefixLen:0 };
 
-    const sig = signSet.has(slotChar) ? slotChar : null; // placeholder => null signifier
+    const sig = signSet.has(slotChar) ? slotChar : null;
     return { hasPrefix:true, sig, bullet:b, rest: line.slice(4), prefixLen:4 };
   }
 
   function buildPrefixFixed(sig, bullet){
     if (!bullet) return "";
-    const slot = (sig ? sig : SIG_PLACEHOLDER) + " "; // always 2 chars
+    const slot = (sig ? sig : SIG_PLACEHOLDER) + " ";
     return slot + bullet + " ";
   }
 
@@ -842,10 +927,9 @@
 
     if (kind === "bullet"){
       bullet = value;
-      if (!sig) sig = null; // keep signifier as-is (null means placeholder shows)
     } else if (kind === "sig"){
-      sig = (sig === value) ? null : value; // toggle/replace
-      if (!bullet) bullet = BUJO.defaultBullet; // ensure bullet exists if adding sig
+      sig = (sig === value) ? null : value;
+      if (!bullet) bullet = BUJO.defaultBullet;
     }
 
     const newPrefix = bullet ? buildPrefixFixed(sig, bullet) : "";
@@ -887,7 +971,6 @@
 
     const t = todayYMD();
     let filtered = items;
-
     if (starredOnly) filtered = filtered.filter(e => !!e.starred);
     if (todayOnly) filtered = filtered.filter(e => fmtDate(new Date(e.ts)) === t);
 
@@ -928,9 +1011,15 @@
               <div class="ts">${escapeHtml(fmtTime(d))}</div>
               <div class="msg">${escapeHtml(e.msg)}</div>
               <div class="actions">
-                <button class="iconbtn star ${starOn}" data-action="star" title="Star" aria-label="Star">${iconStar()}</button>
-                <button class="iconbtn" data-action="edit" title="Edit" aria-label="Edit">${iconPencil()}</button>
-                <button class="iconbtn danger" data-action="delete" title="Delete" aria-label="Delete">${iconTrash()}</button>
+                <button class="iconbtn star ${starOn}" data-action="star" title="Star" aria-label="Star">
+                  ${iconStar()}
+                </button>
+                <button class="iconbtn" data-action="edit" title="Edit" aria-label="Edit">
+                  ${iconPencil()}
+                </button>
+                <button class="iconbtn danger" data-action="delete" title="Delete" aria-label="Delete">
+                  ${iconTrash()}
+                </button>
               </div>
             </div>
           `;
@@ -954,6 +1043,7 @@
 
     logEl.innerHTML = html;
 
+    // Focus edit box when editing
     if (editingId){
       const row = logEl.querySelector(`.entry[data-id="${CSS.escape(editingId)}"]`);
       const box = row && row.querySelector('[data-role="editbox"]');
@@ -1018,47 +1108,6 @@
     return imported;
   }
 
-  // ---------- Command mode (sticky) ----------
-  function setCmdMode(on){
-    cmdMode = on;
-    cmdBadge.classList.toggle("on", on);
-  }
-
-  function handleCommandKey(key){
-    const k = (key || "").toLowerCase();
-
-    // Panels (only in CMD)
-    if (k === "h"){ toggleHelp(); return true; }
-    if (k === "o"){ toggleMenu(); return true; }
-
-    // Filters (CMD)
-    if (k === "t"){
-      todayOnly = !todayOnly;
-      todayOnlyEl.checked = todayOnly;
-      saveUI();
-      render();
-      return true;
-    }
-    if (k === "s"){
-      starredOnly = !starredOnly;
-      starredOnlyEl.checked = starredOnly;
-      saveUI();
-      render();
-      return true;
-    }
-
-    // BuJo (CMD) - only when a textarea is active
-    if (BUJO.cmd[k]){
-      const ta = getActiveTextArea();
-      if (!ta) return false;
-      const spec = BUJO.cmd[k];
-      applyBujoToActive(spec.kind, spec.value);
-      return true;
-    }
-
-    return false;
-  }
-
   // ---------- Events ----------
   addBtn.addEventListener("click", () => {
     addEntry(input.value);
@@ -1067,6 +1116,15 @@
   });
 
   input.addEventListener("keydown", (e) => {
+    if (cmdMode){
+      // In CMD mode, handle keys here too (mobile keyboards focus the textarea)
+      if (["Shift","Control","Alt","Meta"].includes(e.key)) return;
+      e.preventDefault();
+      const handled = handleCommandKey(e.key);
+      if (handled) setCmdMode(false);
+      return;
+    }
+
     if (e.key === "Enter" && !e.shiftKey){
       e.preventDefault();
       addBtn.click();
@@ -1177,7 +1235,7 @@
     }
   });
 
-  // Edit keyboard: Ctrl+Enter save; Esc cancel
+  // Edit keyboard: Ctrl+Enter save; Esc cancel (hardware keyboards)
   logEl.addEventListener("keydown", (e) => {
     const box = e.target.closest('[data-role="editbox"]');
     if (!box) return;
@@ -1207,7 +1265,7 @@
     }
   });
 
-  // Global keyboard
+  // Global keyboard (desktop / HW keyboard)
   document.addEventListener("keydown", (e) => {
     const isMac = navigator.platform.toLowerCase().includes("mac");
     const mod = isMac ? e.metaKey : e.ctrlKey;
@@ -1249,46 +1307,27 @@
     }
   });
 
-  // ---------- Panel helpers (need to exist before command uses them) ----------
-  function openOverlay(){ overlay.classList.add("open"); overlay.setAttribute("aria-hidden","false"); }
-  function closeOverlay(){ overlay.classList.remove("open"); overlay.setAttribute("aria-hidden","true"); }
-  function anyPanelOpen(){ return menuPanel.classList.contains("open") || helpPanel.classList.contains("open"); }
-
-  function openMenu(){
-    helpPanel.classList.remove("open");
-    menuPanel.classList.add("open");
-    openOverlay();
-  }
+  // ---------- Panel helpers ----------
   function closeMenu(){
     menuPanel.classList.remove("open");
     if (!anyPanelOpen()) closeOverlay();
-  }
-  function toggleMenu(){
-    if (menuPanel.classList.contains("open")) closeMenu(); else openMenu();
-  }
-
-  function openHelp(){
-    menuPanel.classList.remove("open");
-    helpPanel.classList.add("open");
-    openOverlay();
   }
   function closeHelp(){
     helpPanel.classList.remove("open");
     if (!anyPanelOpen()) closeOverlay();
   }
-  function toggleHelp(){
-    if (helpPanel.classList.contains("open")) closeHelp(); else openHelp();
+  function anyPanelOpen(){
+    return menuPanel.classList.contains("open") || helpPanel.classList.contains("open");
   }
 
-  overlay.addEventListener("click", () => { closeMenu(); closeHelp(); });
-  menuBtn.addEventListener("click", toggleMenu);
-  menuClose.addEventListener("click", closeMenu);
-  helpBtn.addEventListener("click", toggleHelp);
-  helpClose.addEventListener("click", closeHelp);
+  // Bind menu/help buttons (after helpers exist)
+  // (Already bound above, but safe if reordered in future)
+  // — no-op here
 
   // ---------- Init ----------
   loadUI();
   loadData();
+  setCmdMode(false);
   render();
   input.focus();
 })();
