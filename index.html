@@ -14,7 +14,6 @@
       --danger:#ff5a6a;
       --ok:#63e6be;
       --star:#ffd166;
-      --panel:#0c1320;
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
     }
@@ -51,6 +50,7 @@
       background:rgba(12,19,32,.75);
       color:var(--accent);
       letter-spacing:.2px;
+      user-select:none;
     }
     .cmdBadge.on{display:inline-flex;align-items:center;gap:6px}
     .dot{
@@ -59,7 +59,7 @@
       box-shadow:0 0 0 3px rgba(74,163,255,.15);
     }
 
-    /* Icon buttons (header + list) */
+    /* Header icon buttons */
     .iconTopRow{display:flex;gap:8px;align-items:center}
     .topBtn{
       width:28px;height:28px;
@@ -365,7 +365,7 @@
     <header>
       <div class="titleRow">
         <h1>Action Log</h1>
-        <span class="cmdBadge" id="cmdBadge" title="Command mode active">
+        <span class="cmdBadge" id="cmdBadge" title="Command mode active (Ctrl+; again or Esc to exit)">
           <span class="dot"></span> CMD
         </span>
       </div>
@@ -457,8 +457,8 @@
       </div>
 
       <div class="muted" style="margin-top:10px;">
-        Tip: <span class="kbd">Ctrl</span><span class="kbd">;</span> enters command mode.
-        Press <span class="kbd">h</span> for help, <span class="kbd">o</span> for menu.
+        Tip: <span class="kbd">Ctrl</span><span class="kbd">;</span> toggles CMD mode.
+        Press <span class="kbd">Esc</span> to exit CMD.
       </div>
     </div>
   </div>
@@ -477,13 +477,17 @@
 
     <div class="panelBody">
       <div class="section">
-        <div class="sectionTitle">Command mode</div>
+        <div class="sectionTitle">Command mode (sticky)</div>
         <div class="rowLine">
           <div class="keys"><span class="kbd">Ctrl</span><span class="kbd">;</span></div>
-          <div class="desc">Enter command mode (Mac: Cmd+;)</div>
+          <div class="desc">Toggle CMD mode (Mac: Cmd+;)</div>
+        </div>
+        <div class="rowLine">
+          <div class="keys"><span class="kbd">Esc</span></div>
+          <div class="desc">Exit CMD mode / close panels</div>
         </div>
         <div class="muted" style="margin-top:6px">
-          Then press one key:
+          In CMD mode, type one command key (invalid keys are ignored).
         </div>
       </div>
 
@@ -512,11 +516,14 @@
       </div>
 
       <div class="section">
+        <div class="sectionTitle">Panels (command mode)</div>
+        <div class="rowLine"><div class="keys"><span class="kbd">o</span></div><div class="desc">Open/close menu</div></div>
+        <div class="rowLine"><div class="keys"><span class="kbd">h</span></div><div class="desc">Open/close help</div></div>
+      </div>
+
+      <div class="section">
         <div class="sectionTitle">Other</div>
         <div class="rowLine"><div class="keys"><span class="kbd">Ctrl</span><span class="kbd">/</span></div><div class="desc">Focus input</div></div>
-        <div class="rowLine"><div class="keys"><span class="kbd">h</span></div><div class="desc">Open/close help (in command mode)</div></div>
-        <div class="rowLine"><div class="keys"><span class="kbd">o</span></div><div class="desc">Open/close menu (in command mode)</div></div>
-        <div class="rowLine"><div class="keys"><span class="kbd">Esc</span></div><div class="desc">Close panels / cancel command mode / cancel edit</div></div>
         <div class="rowLine"><div class="keys"><span class="kbd">Ctrl</span><span class="kbd">Enter</span></div><div class="desc">Save edit</div></div>
       </div>
     </div>
@@ -524,7 +531,7 @@
 
 <script>
 (() => {
-  const KEY = "actionLog.v4"; // v4: UI changes + command mode + signifier-first prefix
+  const KEY = "actionLog.v4";
   const OLD_KEYS = ["actionLog.v3","actionLog.v2","actionLog.v1"];
   const UI_TODAY_ONLY   = "actionLog.ui.todayOnly";
   const UI_STARRED_ONLY = "actionLog.ui.starredOnly";
@@ -586,9 +593,8 @@
   let todayOnly = true;
   let starredOnly = false;
 
-  // Command mode state
+  // Command mode state (sticky)
   let cmdMode = false;
-  let cmdTimeout = null;
 
   function pad(n){ return String(n).padStart(2,"0"); }
   function fmtDate(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
@@ -802,7 +808,6 @@
     const sigs = new Set();
     let i = 0;
 
-    // parse signifiers at start
     while (i + 1 < line.length){
       const ch = line[i];
       const next = line[i+1];
@@ -814,7 +819,6 @@
       break;
     }
 
-    // parse bullet
     let bullet = null;
     if (i + 1 < line.length && bulletChars.has(line[i]) && line[i+1] === " "){
       bullet = line[i];
@@ -852,10 +856,10 @@
       else sigs.add(value);
     }
 
-    // ensure a bullet exists if any sigs are present
-    if (!bullet && (sigs.size > 0 || kind === "bullet")) bullet = bullet || BUJO.defaultBullet;
+    // ensure a bullet exists if we have any sigs
+    if (!bullet && sigs.size > 0) bullet = BUJO.defaultBullet;
 
-    const newPrefix = (bullet ? buildPrefix(sigs, bullet) : "");
+    const newPrefix = bullet ? buildPrefix(sigs, bullet) : "";
     const newLine = newPrefix + parsed.rest;
 
     const newText = text.slice(0, ls) + newLine + text.slice(le);
@@ -937,13 +941,13 @@
               <div class="ts">${escapeHtml(fmtTime(d))}</div>
               <div class="msg">${escapeHtml(e.msg)}</div>
               <div class="actions">
-                <button class="iconbtn star ${starOn}" data-action="star" title="Bookmark">
+                <button class="iconbtn star ${starOn}" data-action="star" title="Star" aria-label="Star">
                   ${iconStar()}
                 </button>
-                <button class="iconbtn" data-action="edit" title="Edit">
+                <button class="iconbtn" data-action="edit" title="Edit" aria-label="Edit">
                   ${iconPencil()}
                 </button>
-                <button class="iconbtn danger" data-action="delete" title="Delete">
+                <button class="iconbtn danger" data-action="delete" title="Delete" aria-label="Delete">
                   ${iconTrash()}
                 </button>
               </div>
@@ -956,10 +960,10 @@
               <div class="msg">
                 <textarea class="editbox" data-role="editbox">${escapeHtml(e.msg)}</textarea>
                 <div class="editrow">
-                  <button class="iconbtn ok" data-action="save" title="Save">
+                  <button class="iconbtn ok" data-action="save" title="Save" aria-label="Save">
                     ${iconCheck()}
                   </button>
-                  <button class="iconbtn" data-action="cancel" title="Cancel">
+                  <button class="iconbtn" data-action="cancel" title="Cancel" aria-label="Cancel">
                     ${iconX()}
                   </button>
                 </div>
@@ -1037,24 +1041,20 @@
     return imported;
   }
 
-  // ---------- Command mode ----------
+  // ---------- Command mode (STICKY) ----------
   function setCmdMode(on){
     cmdMode = on;
     cmdBadge.classList.toggle("on", on);
-    if (cmdTimeout) clearTimeout(cmdTimeout);
-    if (on){
-      cmdTimeout = setTimeout(() => setCmdMode(false), 2000); // auto-exit after 2s
-    }
   }
 
   function handleCommandKey(key){
     const k = (key || "").toLowerCase();
 
-    // panel commands
+    // Panels
     if (k === "h"){ toggleHelp(); return true; }
     if (k === "o"){ toggleMenu(); return true; }
 
-    // filter toggles
+    // Filters
     if (k === "t"){
       todayOnly = !todayOnly;
       todayOnlyEl.checked = todayOnly;
@@ -1070,7 +1070,7 @@
       return true;
     }
 
-    // bujo prefix commands (only if a textarea is active)
+    // BuJo (only if textarea active)
     if (BUJO.cmd[k]){
       const ta = getActiveTextArea();
       if (!ta) return false;
@@ -1151,7 +1151,7 @@
     render();
   });
 
-  // List actions
+  // List actions (buttons)
   logEl.addEventListener("click", (e) => {
     const btn = e.target.closest("button[data-action]");
     if (!btn) return;
@@ -1235,7 +1235,7 @@
     const isMac = navigator.platform.toLowerCase().includes("mac");
     const mod = isMac ? e.metaKey : e.ctrlKey;
 
-    // Esc closes panels and cancels command mode
+    // Esc closes panels and exits command mode
     if (e.key === "Escape"){
       if (cmdMode){ e.preventDefault(); setCmdMode(false); return; }
       if (menuPanel.classList.contains("open") || helpPanel.classList.contains("open")){
@@ -1252,20 +1252,24 @@
       return;
     }
 
-    // Enter command mode: Ctrl+; (Mac Cmd+;)
+    // Toggle command mode: Ctrl+; (Mac Cmd+;)
     if (mod && e.key === ";"){
       e.preventDefault();
-      setCmdMode(true);
+      setCmdMode(!cmdMode);
       return;
     }
 
-    // If in command mode, consume next key
+    // If in command mode, consume keys until a VALID command is pressed
     if (cmdMode){
-      // ignore modifier-only keys
       if (["Shift","Control","Alt","Meta"].includes(e.key)) return;
+
       e.preventDefault();
       const handled = handleCommandKey(e.key);
-      setCmdMode(false);
+
+      // Sticky behavior requested:
+      // - valid command => exit cmd mode
+      // - invalid key => stay in cmd mode
+      if (handled) setCmdMode(false);
       return;
     }
   });
