@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Action Log</title>
+  <style>
+    :root{
+      --bg:#0b0f14;
+      --card:#0f1623;
+      --muted:#8aa0b8;
+      --text:#e8f0ff;
+      --accent:#4aa3ff;
+      --line:#1b2a3f;
+      --danger:#ff5a6a;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:var(--sans);
+      background:radial-gradient(1200px 700px at 20% -10%, #13213a 0%, transparent 55%),
+                 radial-gradient(900px 600px at 100% 0%, #102033 0%, transparent 55%),
+                 var(--bg);
+      color:var(--text);
+    }
+    .wrap{max-width:820px;margin:0 auto;padding:18px 14px 44px}
+    header{display:flex;gap:10px;align-items:baseline;justify-content:space-between;margin:8px 0 14px}
+    h1{margin:0;font-size:18px;letter-spacing:.2px}
+    .hint{color:var(--muted);font-size:12px}
+    .bar{
+      display:flex; gap:8px; flex-wrap:wrap;
+      background:rgba(15,22,35,.75);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:10px;
+      box-shadow:0 10px 30px rgba(0,0,0,.25);
+      backdrop-filter: blur(8px);
+    }
+    textarea{
+      flex:1 1 360px;
+      min-height:44px;
+      max-height:160px;
+      resize:vertical;
+      width:100%;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:#0c1320;
+      color:var(--accent); /* blue text like you prefer */
+      outline:none;
+      font-family:var(--mono);
+      font-size:14px;
+      line-height:1.3;
+    }
+    textarea:focus{border-color:#2a68ff55; box-shadow:0 0 0 3px #2a68ff22}
+    .btn{
+      appearance:none;
+      border:1px solid var(--line);
+      background:#0c1320;
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:12px;
+      cursor:pointer;
+      font-size:12px;
+      transition:transform .06s ease, border-color .12s ease, background .12s ease;
+      white-space:nowrap;
+    }
+    .btn:hover{border-color:#2a68ff55}
+    .btn:active{transform:translateY(1px)}
+    .btn.primary{border-color:#2a68ff66; background:#0d1a2b}
+    .btn.danger{border-color:#ff5a6a55;color:#ffd1d6}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .small{font-size:12px;color:var(--muted)}
+    .log{
+      margin-top:14px;
+      border:1px solid var(--line);
+      border-radius:16px;
+      overflow:hidden;
+      background:rgba(15,22,35,.65);
+      box-shadow:0 10px 30px rgba(0,0,0,.25);
+      backdrop-filter: blur(8px);
+    }
+    .day{
+      border-top:1px solid var(--line);
+      padding:10px 12px;
+      background:rgba(12,19,32,.6);
+      color:var(--muted);
+      font-size:12px;
+      letter-spacing:.2px;
+      display:flex;justify-content:space-between;align-items:center;
+      font-family:var(--mono);
+    }
+    .entry{
+      display:flex;
+      gap:10px;
+      padding:10px 12px;
+      border-top:1px dashed rgba(27,42,63,.7);
+      align-items:flex-start;
+      font-family:var(--mono);
+      font-size:13px;
+      line-height:1.35;
+      background:rgba(15,22,35,.35);
+    }
+    .entry:first-of-type{border-top:none}
+    .ts{color:var(--muted); min-width:82px}
+    .msg{white-space:pre-wrap; word-break:break-word; color:var(--text)}
+    .empty{padding:16px;color:var(--muted);font-family:var(--mono);font-size:13px}
+    .footer{margin-top:10px;color:var(--muted);font-size:12px}
+    .kbd{font-family:var(--mono);border:1px solid var(--line);padding:1px 6px;border-radius:8px;background:#0c1320;color:var(--text)}
+    @media (max-width:520px){
+      textarea{font-size:16px} /* better mobile typing */
+      header{flex-direction:column;gap:6px;align-items:flex-start}
+      .hint{line-height:1.25}
+      .btn{padding:10px 10px}
+      .ts{min-width:74px}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Action Log</h1>
+      <div class="hint">
+        <span class="kbd">Enter</span> add · <span class="kbd">Shift+Enter</span> newline ·
+        <span class="kbd">Ctrl+/</span> focus
+      </div>
+    </header>
+
+    <div class="bar">
+      <textarea id="input" placeholder="Type an action…"></textarea>
+      <div class="row">
+        <button class="btn primary" id="add">Add</button>
+        <button class="btn" id="export">Export .txt</button>
+        <button class="btn" id="importBtn">Import .txt</button>
+        <button class="btn danger" id="clear">Clear</button>
+        <input id="file" type="file" accept=".txt,text/plain" style="display:none" />
+        <div class="small" id="count"></div>
+      </div>
+    </div>
+
+    <div class="log" id="log"></div>
+
+    <div class="footer">
+      Stored locally in your browser (localStorage). For backup, use Export.
+    </div>
+  </div>
+
+<script>
+(() => {
+  const KEY = "actionLog.v1";
+  const $ = (id) => document.getElementById(id);
+
+  const input = $("input");
+  const addBtn = $("add");
+  const exportBtn = $("export");
+  const importBtn = $("importBtn");
+  const clearBtn = $("clear");
+  const file = $("file");
+  const logEl = $("log");
+  const countEl = $("count");
+
+  /** @type {{ts:number, msg:string}[]} */
+  let items = [];
+
+  function pad(n){ return String(n).padStart(2,"0"); }
+  function fmtDate(d){
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  }
+  function fmtTime(d){
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+  function fmtStamp(d){
+    return `${fmtDate(d)} ${fmtTime(d)}`;
+  }
+
+  function load(){
+    try{
+      const raw = localStorage.getItem(KEY);
+      items = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(items)) items = [];
+    } catch(e){
+      items = [];
+    }
+  }
+  function save(){
+    localStorage.setItem(KEY, JSON.stringify(items));
+  }
+
+  function addEntry(msg){
+    const text = (msg ?? "").trim();
+    if (!text) return;
+    const ts = Date.now();
+    items.push({ ts, msg: text });
+    save();
+    render();
+  }
+
+  function groupByDay(entries){
+    // entries assumed sorted by ts ascending
+    const out = [];
+    let currentDay = null, bucket = null;
+    for (const e of entries){
+      const day = fmtDate(new Date(e.ts));
+      if (day !== currentDay){
+        currentDay = day;
+        bucket = { day, entries: [] };
+        out.push(bucket);
+      }
+      bucket.entries.push(e);
+    }
+    return out;
+  }
+
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, c => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[c]));
+  }
+
+  function render(){
+    countEl.textContent = `${items.length} entr${items.length===1?"y":"ies"}`;
+    if (!items.length){
+      logEl.innerHTML = `<div class="empty">No entries yet. Type something above and press Enter.</div>`;
+      return;
+    }
+
+    // Show newest at top, but groupings are easier if we sort ascending then reverse display.
+    const sorted = [...items].sort((a,b)=>a.ts-b.ts);
+    const groups = groupByDay(sorted);
+
+    // Render newest day first
+    groups.reverse();
+
+    let html = "";
+    for (const g of groups){
+      const dayCount = g.entries.length;
+      html += `
+        <div class="day">
+          <div>${g.day}</div>
+          <div>${dayCount} entr${dayCount===1?"y":"ies"}</div>
+        </div>
+      `;
+
+      // Render newest entries first within the day
+      const entries = [...g.entries].sort((a,b)=>b.ts-a.ts);
+      for (const e of entries){
+        const d = new Date(e.ts);
+        html += `
+          <div class="entry">
+            <div class="ts">${escapeHtml(fmtTime(d))}</div>
+            <div class="msg">${escapeHtml(e.msg)}</div>
+          </div>
+        `;
+      }
+    }
+    logEl.innerHTML = html;
+  }
+
+  function exportTxt(){
+    // Export oldest->newest in a simple durable format:
+    // YYYY-MM-DD HH:mm:ss - message
+    const sorted = [...items].sort((a,b)=>a.ts-b.ts);
+    const lines = sorted.map(e => `${fmtStamp(new Date(e.ts))} - ${e.msg.replace(/\r?\n/g, "\\n")}`);
+    const blob = new Blob([lines.join("\n") + "\n"], {type:"text/plain;charset=utf-8"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `action-log_${fmtDate(new Date())}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+  }
+
+  function parseImportedText(text){
+    // Accept lines like:
+    // 2026-03-19 15:17:23 - Something
+    // If timestamp missing, import with "now" order preserved.
+    const now = Date.now();
+    const lines = text.split(/\r?\n/).filter(Boolean);
+    const imported = [];
+    let offset = 0;
+
+    for (const line of lines){
+      const m = line.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})\s+-\s+(.*)$/);
+      if (m){
+        const [_, ymd, hms, msgRaw] = m;
+        const ts = Date.parse(ymd + "T" + hms);
+        const msg = (msgRaw || "").replace(/\\n/g, "\n").trim();
+        if (!Number.isNaN(ts) && msg) imported.push({ ts, msg });
+      } else {
+        const msg = line.trim();
+        if (msg) imported.push({ ts: now + (offset++), msg });
+      }
+    }
+    return imported;
+  }
+
+  // Events
+  addBtn.addEventListener("click", () => {
+    addEntry(input.value);
+    input.value = "";
+    input.focus();
+  });
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey){
+      e.preventDefault();
+      addBtn.click();
+    }
+  });
+
+  exportBtn.addEventListener("click", exportTxt);
+
+  importBtn.addEventListener("click", () => file.click());
+
+  file.addEventListener("change", async () => {
+    const f = file.files && file.files[0];
+    file.value = ""; // allow re-import same file
+    if (!f) return;
+    const text = await f.text();
+    const imported = parseImportedText(text);
+    if (!imported.length){
+      alert("No valid lines found to import.");
+      return;
+    }
+    items = items.concat(imported);
+    // de-dup exact matches (ts+msg)
+    const seen = new Set();
+    items = items.filter(e => {
+      const k = e.ts + "|" + e.msg;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+    save();
+    render();
+  });
+
+  clearBtn.addEventListener("click", () => {
+    const ok = confirm("Clear ALL entries? This cannot be undone (export first if needed).");
+    if (!ok) return;
+    items = [];
+    save();
+    render();
+    input.focus();
+  });
+
+  // Keyboard shortcut: Ctrl+/ (or Cmd+/) focuses input
+  document.addEventListener("keydown", (e) => {
+    const isMac = navigator.platform.toLowerCase().includes("mac");
+    const mod = isMac ? e.metaKey : e.ctrlKey;
+    if (mod && e.key === "/"){
+      e.preventDefault();
+      input.focus();
+    }
+  });
+
+  // Init
+  load();
+  render();
+  input.focus();
+})();
+</script>
+</body>
+</html>
