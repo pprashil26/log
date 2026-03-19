@@ -383,8 +383,8 @@
     .iconbtn.chev.hidden{display:none}
 
     /* Display-only tone rules (not editor) */
-    .tone-event { color: var(--accent); }      /* blue */
-    .tone-priority { color: var(--danger); font-weight:800; }   /* red + bold (requested) */
+    .tone-event { color: var(--accent); }                 /* blue */
+    .tone-priority { color: var(--danger); font-weight:800; } /* red + bold */
 
     .sig { opacity:.95; }
     .sig-ph { color: var(--muted); opacity:.65; }
@@ -408,6 +408,31 @@
 
     .empty{padding:12px;color:var(--muted);font-family:var(--mono);font-size:11.5px}
     .footer{margin-top:6px;color:var(--muted);font-size:11px}
+
+    /* ---------- HELP: Layer 3 micro‑polish (compact) ---------- */
+    #helpPanel .panelBody{ padding:8px 10px; } /* reduce padding only for Help */
+    .compactHelp{ font-size:10px; line-height:1.25; }
+    .compactHelp .kbd{ padding:0 5px; font-size:9.5px; } /* smaller kbd badges */
+
+    .helpGrid{
+      display:grid;
+      grid-template-columns:auto 1fr;
+      column-gap:10px;
+      row-gap:6px;
+    }
+    .helpRow{ white-space:nowrap; }
+    .helpRow b{
+      font-weight:700;
+      color:var(--muted);
+      white-space:nowrap;
+    }
+    .helpFoot{
+      grid-column:1 / -1;
+      color:var(--muted);
+      font-size:9.5px;
+      margin-top:4px;
+      white-space:nowrap;
+    }
 
     @media (max-width:520px){
       .wrap{padding:12px 10px 30px}
@@ -520,7 +545,7 @@
     </div>
   </div>
 
-  <!-- Help panel -->
+  <!-- Help panel (ultra-compact + Layer 3 micro polish) -->
   <div class="panel" id="helpPanel" role="dialog" aria-modal="true" aria-label="Help">
     <div class="panelHead">
       <div class="panelTitle">Help</div>
@@ -531,55 +556,45 @@
       </button>
     </div>
 
-    <div class="panelBody">
-      <div class="section">
-        <div class="sectionTitle">Command mode (sticky)</div>
-        <div class="rowLine"><div class="keys"><span class="kbd">Ctrl</span><span class="kbd">;</span></div><div class="desc">Toggle CMD (Mac: Cmd+;)</div></div>
-        <div class="rowLine"><div class="keys"><span class="kbd">Mobile</span></div><div class="desc">Tap CMD button</div></div>
-      </div>
+    <div class="panelBody compactHelp">
+      <div class="helpGrid">
+        <div class="helpRow"><b>CMD</b></div>
+        <div class="helpRow"><span class="kbd">Ctrl</span><span class="kbd">;</span> / Tap CMD</div>
 
-      <div class="section">
-        <div class="sectionTitle">Prefix</div>
-        <div class="muted">Format: <span class="kbd">·</span><span class="kbd">␠</span><span class="kbd">•</span><span class="kbd">␠</span>text</div>
-        <div class="muted" style="margin-top:6px;">Signifiers: <span class="kbd">!</span> priority · <span class="kbd">?</span> explore</div>
-        <div class="muted" style="margin-top:6px;">Display: <span class="kbd">○</span> event = blue; <span class="kbd">!</span> (non-event) = red + bold</div>
-      </div>
+        <div class="helpRow"><b>Bullets</b></div>
+        <div class="helpRow">
+          <span class="kbd">a</span>• 
+          <span class="kbd">n</span>– 
+          <span class="kbd">e</span>○ 
+          <span class="kbd">m</span>~
+          <span class="kbd">d</span>✓
+          <span class="kbd">x</span>✗
+          <span class="kbd">f</span>→
+        </div>
 
-      <div class="section">
-        <div class="sectionTitle">Bullets (CMD)</div>
-        <div class="rowLine"><div class="keys"><span class="kbd">a</span></div><div class="desc">• task</div></div>
-        <div class="rowLine"><div class="keys"><span class="kbd">n</span></div><div class="desc">– note</div></div>
-        <div class="rowLine"><div class="keys"><span class="kbd">e</span></div><div class="desc">○ event</div></div>
-        <div class="rowLine"><div class="keys"><span class="kbd">m</span></div><div class="desc">~ mood</div></div>
-        <div class="rowLine"><div class="keys"><span class="kbd">d</span></div><div class="desc">✓ done</div></div>
-        <div class="rowLine"><div class="keys"><span class="kbd">x</span></div><div class="desc">✗ cancelled</div></div>
-        <div class="rowLine"><div class="keys"><span class="kbd">f</span></div><div class="desc">→ forward</div></div>
-      </div>
+        <div class="helpRow"><b>Sign</b></div>
+        <div class="helpRow">
+          <span class="kbd">p</span>! <span class="kbd">q</span>?
+        </div>
 
-      <div class="section">
-        <div class="sectionTitle">Signifier (CMD)</div>
-        <div class="rowLine"><div class="keys"><span class="kbd">p</span></div><div class="desc">! priority</div></div>
-        <div class="rowLine"><div class="keys"><span class="kbd">q</span> / <span class="kbd">?</span></div><div class="desc">? explore</div></div>
-      </div>
+        <div class="helpRow"><b>Colors</b></div>
+        <div class="helpRow">○ = blue · ! = red+bold</div>
 
-      <div class="section">
-        <div class="sectionTitle">Filters (CMD)</div>
-        <div class="rowLine"><div class="keys"><span class="kbd">t</span></div><div class="desc">Today only</div></div>
-        <div class="rowLine"><div class="keys"><span class="kbd">s</span></div><div class="desc">Starred only</div></div>
-      </div>
+        <div class="helpRow"><b>Filter</b></div>
+        <div class="helpRow"><span class="kbd">t</span>today <span class="kbd">s</span>★</div>
 
-      <div class="section">
-        <div class="sectionTitle">Panels (CMD)</div>
-        <div class="rowLine"><div class="keys"><span class="kbd">o</span></div><div class="desc">Menu</div></div>
-        <div class="rowLine"><div class="keys"><span class="kbd">h</span></div><div class="desc">Help</div></div>
+        <div class="helpRow"><b>UI</b></div>
+        <div class="helpRow"><span class="kbd">o</span>menu <span class="kbd">h</span>help <span class="kbd">Esc</span>close</div>
+
+        <div class="helpRow helpFoot">Prefix: · ␠ bullet ␠ text</div>
       </div>
     </div>
   </div>
 
 <script>
 (() => {
-  const KEY = "actionLog.v16";
-  const OLD_KEYS = ["actionLog.v15","actionLog.v14","actionLog.v13","actionLog.v12","actionLog.v11","actionLog.v10","actionLog.v9","actionLog.v8","actionLog.v7","actionLog.v6","actionLog.v5","actionLog.v4","actionLog.v3","actionLog.v2","actionLog.v1"];
+  const KEY = "actionLog.v17";
+  const OLD_KEYS = ["actionLog.v16","actionLog.v15","actionLog.v14","actionLog.v13","actionLog.v12","actionLog.v11","actionLog.v10","actionLog.v9","actionLog.v8","actionLog.v7","actionLog.v6","actionLog.v5","actionLog.v4","actionLog.v3","actionLog.v2","actionLog.v1"];
 
   const UI_TODAY_ONLY   = "actionLog.ui.todayOnly";
   const UI_STARRED_ONLY = "actionLog.ui.starredOnly";
@@ -656,7 +671,7 @@
     try{
       const v = localStorage.getItem(UI_LIGHT_MODE);
       if (v === "0") return false;
-      return true; // default ON
+      return true;
     } catch(e){
       return true;
     }
@@ -708,6 +723,7 @@
     if (BULLETS.has(first) && second === " "){
       return buildPrefix(null, first) + raw.slice(2);
     }
+
     if (raw.startsWith("!! ")){
       if (BULLETS.has(raw[3] || "") && (raw[4] || "") === " "){
         const bullet = raw[3];
@@ -716,6 +732,7 @@
       }
       return buildPrefix(SIG_PRIORITY, DEFAULT_BULLET) + raw.slice(3);
     }
+
     if (raw.startsWith("💡 ")){
       if (BULLETS.has(raw[3] || "") && (raw[4] || "") === " "){
         const bullet = raw[3];
@@ -724,6 +741,7 @@
       }
       return buildPrefix(null, DEFAULT_BULLET) + raw.slice(3);
     }
+
     if ((first === "*" || first === "!" || first === "?" || first === "·") && second === " " && BULLETS.has(raw[2] || "") && (raw[3] || "") === " "){
       const bullet = raw[2];
       const rest = raw.slice(4);
@@ -783,6 +801,9 @@
     return true;
   }
 
+  // Display-only formatting with tone rules:
+  // - Event bullet ○ => blue
+  // - Priority sign ! (non-event) => red + bold
   function formatMsgForDisplay(msg){
     const safe = escapeHtml(msg);
     if (safe.length < 4) return safe;
@@ -790,7 +811,6 @@
     const sig = safe[0];
     const bullet = safe[2];
 
-    // precedence: event blue always
     let toneClass = "";
     if (bullet === "○") toneClass = "tone-event";
     else if (sig === "!") toneClass = "tone-priority";
@@ -1030,9 +1050,11 @@
               <div class="msg collapsed" data-role="msg">${formatMsgForDisplay(e.msg)}</div>
               <div class="rightMeta">
                 <div class="tsRight">${escapeHtml(fmtTime(d))}</div>
+
                 <button class="iconbtn chev hidden" data-action="toggleExpand" title="Expand/collapse" aria-label="Expand/collapse">
                   ${iconChevronDown()}
                 </button>
+
                 <div class="actions">
                   <button class="iconbtn star ${starOn}" data-action="star" title="Star" aria-label="Star">
                     ${iconStar()}
@@ -1116,6 +1138,7 @@
         else if (msg.startsWith("★")){ starred = true; msg = msg.slice(1).trimStart(); }
 
         msg = ensurePrefixOnFirstLine(msg);
+
         if (!Number.isNaN(ts) && msg){
           imported.push({ id: uid(ts), ts, msg, starred });
         }
@@ -1127,6 +1150,7 @@
         else if (msg.startsWith("★")){ starred = true; msg = msg.slice(1).trimStart(); }
 
         msg = ensurePrefixOnFirstLine(msg);
+
         if (msg){
           const ts = now + (offset++);
           imported.push({ id: uid(ts), ts, msg, starred });
@@ -1136,15 +1160,14 @@
     return imported;
   }
 
-  // --------- Event wiring ----------
-  // Menu/Help open/close
+  // Panels wiring
   menuBtn.addEventListener("click", toggleMenu);
   menuClose.addEventListener("click", closeMenu);
   helpBtn.addEventListener("click", toggleHelp);
   helpClose.addEventListener("click", closeHelp);
   overlay.addEventListener("click", () => { closeMenu(); closeHelp(); });
 
-  // Theme
+  // Theme wiring
   const initialLight = loadLightMode();
   applyLightMode(initialLight);
   lightModeToggle.checked = initialLight;
@@ -1270,7 +1293,7 @@
     }
   });
 
-  // Log actions (expand/star/edit/save/delete)
+  // Log actions
   logEl.addEventListener("click", (e) => {
     const btn = e.target.closest("button[data-action]");
     if (!btn) return;
@@ -1321,7 +1344,7 @@
     }
   });
 
-  // ----- Init -----
+  // Init
   loadUI();
   loadData();
   setCmdMode(false);
