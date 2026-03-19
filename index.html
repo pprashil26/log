@@ -37,11 +37,32 @@
       margin:6px 0 10px;
       position:relative;
     }
+    .titleRow{display:flex;align-items:center;gap:8px}
     h1{margin:0;font-size:16px;letter-spacing:.2px}
 
-    /* Help icon */
-    .helpBtn{
-      width:26px;height:26px;
+    /* Command-mode indicator */
+    .cmdBadge{
+      display:none;
+      font-family:var(--mono);
+      font-size:10.5px;
+      padding:2px 8px;
+      border-radius:999px;
+      border:1px solid rgba(74,163,255,.35);
+      background:rgba(12,19,32,.75);
+      color:var(--accent);
+      letter-spacing:.2px;
+    }
+    .cmdBadge.on{display:inline-flex;align-items:center;gap:6px}
+    .dot{
+      width:6px;height:6px;border-radius:999px;
+      background:var(--accent);
+      box-shadow:0 0 0 3px rgba(74,163,255,.15);
+    }
+
+    /* Icon buttons (header + list) */
+    .iconTopRow{display:flex;gap:8px;align-items:center}
+    .topBtn{
+      width:28px;height:28px;
       display:grid;place-items:center;
       border-radius:999px;
       border:1px solid var(--line);
@@ -51,11 +72,11 @@
       color:var(--text);
       box-shadow:0 6px 18px rgba(0,0,0,.25);
     }
-    .helpBtn:hover{border-color:#2a68ff55}
-    .helpBtn:active{transform:translateY(1px)}
-    .helpBtn svg{width:14px;height:14px;stroke:var(--text);stroke-width:2;fill:none;opacity:.9}
+    .topBtn:hover{border-color:#2a68ff55}
+    .topBtn:active{transform:translateY(1px)}
+    .topBtn svg{width:14px;height:14px;stroke:var(--text);stroke-width:2;fill:none;opacity:.9}
 
-    /* Help overlay */
+    /* Overlay + panels */
     .overlay{
       position:fixed;
       inset:0;
@@ -65,7 +86,7 @@
     }
     .overlay.open{display:block}
 
-    .helpPanel{
+    .panel{
       position:fixed;
       top:64px;
       right:14px;
@@ -79,15 +100,15 @@
       overflow:hidden;
       backdrop-filter: blur(10px);
     }
-    .helpPanel.open{display:block}
+    .panel.open{display:block}
 
-    .helpHead{
+    .panelHead{
       display:flex;align-items:center;justify-content:space-between;
       padding:10px 12px;
       border-bottom:1px solid rgba(27,42,63,.85);
       background:rgba(15,22,35,.7);
     }
-    .helpTitle{font-size:12px;color:var(--text);font-family:var(--mono);letter-spacing:.2px}
+    .panelTitle{font-size:12px;color:var(--text);font-family:var(--mono);letter-spacing:.2px}
     .closeBtn{
       width:26px;height:26px;
       display:grid;place-items:center;
@@ -100,31 +121,31 @@
     .closeBtn:hover{border-color:#2a68ff55}
     .closeBtn svg{width:14px;height:14px;stroke:var(--text);stroke-width:2;fill:none;opacity:.9}
 
-    .helpBody{
+    .panelBody{
       padding:10px 12px 12px;
       font-family:var(--mono);
       font-size:11px;
       color:var(--text);
       line-height:1.35;
     }
-    .helpBody .muted{color:var(--muted)}
-    .helpSection{margin-top:10px}
-    .helpSection:first-child{margin-top:0}
-    .helpSectionTitle{
+    .muted{color:var(--muted)}
+    .section{margin-top:10px}
+    .section:first-child{margin-top:0}
+    .sectionTitle{
       color:var(--muted);
       font-size:10.5px;
       letter-spacing:.2px;
       margin-bottom:6px;
       text-transform:uppercase;
     }
-    .shortcutRow{
+    .rowLine{
       display:flex;
       gap:10px;
       justify-content:space-between;
       padding:4px 0;
       border-bottom:1px dashed rgba(27,42,63,.55);
     }
-    .shortcutRow:last-child{border-bottom:none}
+    .rowLine:last-child{border-bottom:none}
     .keys{white-space:nowrap}
     .desc{color:var(--text);opacity:.95;flex:1;text-align:right}
     .kbd{
@@ -148,7 +169,7 @@
       backdrop-filter: blur(8px);
     }
     textarea#input{
-      flex:1 1 340px;
+      flex:1 1 360px;
       min-height:40px;
       max-height:120px;
       resize:vertical;
@@ -182,21 +203,43 @@
     .btn.primary{border-color:#2a68ff66; background:#0d1a2b}
     .btn.danger{border-color:#ff5a6a55;color:#ffd1d6}
 
-    .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-    .small{font-size:11px;color:var(--muted)}
+    .small{font-size:11px;color:var(--muted);align-self:center}
 
-    .toggle{
-      display:flex;align-items:center;gap:6px;
-      padding:6px 8px;
-      border:1px solid var(--line);
-      background:#0c1320;
+    /* Menu items */
+    .menuItem{
+      display:flex;align-items:center;justify-content:space-between;
+      gap:10px;
+      padding:8px 10px;
+      border:1px solid rgba(27,42,63,.75);
+      background:rgba(12,19,32,.6);
       border-radius:12px;
+      margin-bottom:8px;
+    }
+    .menuItem:last-child{margin-bottom:0}
+    .menuLabel{font-family:var(--mono);font-size:11px;color:var(--text)}
+    .menuRight{display:flex;align-items:center;gap:8px}
+    .menuBtn{
+      border:1px solid rgba(27,42,63,.9);
+      background:#0c1320;
+      color:var(--text);
+      font-family:var(--mono);
+      font-size:11px;
+      padding:6px 10px;
+      border-radius:12px;
+      cursor:pointer;
+    }
+    .menuBtn:hover{border-color:#2a68ff55}
+    .menuBtn.danger{border-color:#ff5a6a55;color:#ffd1d6}
+    .menuToggle{
+      display:flex;align-items:center;gap:6px;
+      font-family:var(--mono);
       font-size:11px;
       color:var(--text);
       user-select:none;
     }
-    .toggle input{accent-color: var(--accent); width:14px; height:14px; margin:0}
+    .menuToggle input{accent-color: var(--accent); width:14px; height:14px; margin:0}
 
+    /* Log */
     .log{
       margin-top:8px;
       border:1px solid var(--line);
@@ -313,62 +356,117 @@
       .ts{min-width:50px}
       .iconbtn{width:22px;height:22px}
       .iconbtn svg{width:13px;height:13px}
-      .helpPanel{top:56px; right:10px}
+      .panel{top:56px; right:10px}
     }
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
-      <h1>Action Log</h1>
+      <div class="titleRow">
+        <h1>Action Log</h1>
+        <span class="cmdBadge" id="cmdBadge" title="Command mode active">
+          <span class="dot"></span> CMD
+        </span>
+      </div>
 
-      <!-- Small help icon -->
-      <button class="helpBtn" id="helpBtn" title="Keyboard shortcuts" aria-label="Keyboard shortcuts" aria-haspopup="dialog" aria-controls="helpPanel">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 18h.01"></path>
-          <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"></path>
-          <path d="M12 22a10 10 0 1 0-10-10 10 10 0 0 0 10 10z"></path>
-        </svg>
-      </button>
+      <div class="iconTopRow">
+        <!-- Menu icon -->
+        <button class="topBtn" id="menuBtn" title="Menu" aria-label="Menu" aria-haspopup="dialog" aria-controls="menuPanel">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 7h16"></path>
+            <path d="M4 12h16"></path>
+            <path d="M4 17h16"></path>
+          </svg>
+        </button>
+
+        <!-- Help icon -->
+        <button class="topBtn" id="helpBtn" title="Keyboard shortcuts" aria-label="Keyboard shortcuts" aria-haspopup="dialog" aria-controls="helpPanel">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 18h.01"></path>
+            <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"></path>
+            <path d="M12 22a10 10 0 1 0-10-10 10 10 0 0 0 10 10z"></path>
+          </svg>
+        </button>
+      </div>
     </header>
 
     <div class="bar">
       <textarea id="input" placeholder="Type an action…"></textarea>
-
-      <div class="row">
-        <button class="btn primary" id="add">Add</button>
-        <button class="btn" id="export">Export .txt</button>
-        <button class="btn" id="importBtn">Import .txt</button>
-
-        <label class="toggle" title="Show only today's entries (shortcut in help)">
-          <input id="todayOnly" type="checkbox" />
-          Today only
-        </label>
-
-        <label class="toggle" title="Show only starred entries (shortcut in help)">
-          <input id="starredOnly" type="checkbox" />
-          Starred only
-        </label>
-
-        <button class="btn danger" id="clear">Clear</button>
-        <input id="file" type="file" accept=".txt,text/plain" style="display:none" />
-        <div class="small" id="count"></div>
-      </div>
+      <button class="btn primary" id="add">Add</button>
+      <div class="small" id="count"></div>
     </div>
 
     <div class="log" id="log"></div>
 
     <div class="footer">
-      Stored locally in your browser (localStorage). For backup, use Export.
+      Stored locally in your browser (localStorage). For backup, use Export (menu).
     </div>
   </div>
 
-  <!-- Help overlay + panel -->
-  <div class="overlay" id="helpOverlay" aria-hidden="true"></div>
+  <!-- Shared overlay -->
+  <div class="overlay" id="overlay" aria-hidden="true"></div>
 
-  <div class="helpPanel" id="helpPanel" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
-    <div class="helpHead">
-      <div class="helpTitle">Keyboard shortcuts <span class="muted">(Win/Linux: Ctrl+Alt · Mac: Cmd+Option)</span></div>
+  <!-- Menu panel -->
+  <div class="panel" id="menuPanel" role="dialog" aria-modal="true" aria-label="Menu">
+    <div class="panelHead">
+      <div class="panelTitle">Menu</div>
+      <button class="closeBtn" id="menuClose" aria-label="Close menu">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M18 6L6 18"></path>
+          <path d="M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+
+    <div class="panelBody">
+      <div class="menuItem">
+        <div class="menuLabel">Export</div>
+        <div class="menuRight">
+          <button class="menuBtn" id="export">Export .txt</button>
+        </div>
+      </div>
+
+      <div class="menuItem">
+        <div class="menuLabel">Import</div>
+        <div class="menuRight">
+          <button class="menuBtn" id="importBtn">Import .txt</button>
+          <input id="file" type="file" accept=".txt,text/plain" style="display:none" />
+        </div>
+      </div>
+
+      <div class="menuItem">
+        <div class="menuLabel">Filters</div>
+        <div class="menuRight" style="gap:14px">
+          <label class="menuToggle" title="Command mode: Ctrl+; then t">
+            <input id="todayOnly" type="checkbox" />
+            Today
+          </label>
+          <label class="menuToggle" title="Command mode: Ctrl+; then s">
+            <input id="starredOnly" type="checkbox" />
+            Starred
+          </label>
+        </div>
+      </div>
+
+      <div class="menuItem">
+        <div class="menuLabel">Danger</div>
+        <div class="menuRight">
+          <button class="menuBtn danger" id="clear">Clear all</button>
+        </div>
+      </div>
+
+      <div class="muted" style="margin-top:10px;">
+        Tip: <span class="kbd">Ctrl</span><span class="kbd">;</span> enters command mode.
+        Press <span class="kbd">h</span> for help, <span class="kbd">o</span> for menu.
+      </div>
+    </div>
+  </div>
+
+  <!-- Help panel -->
+  <div class="panel" id="helpPanel" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
+    <div class="panelHead">
+      <div class="panelTitle">Shortcuts</div>
       <button class="closeBtn" id="helpClose" aria-label="Close help">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M18 6L6 18"></path>
@@ -377,130 +475,108 @@
       </button>
     </div>
 
-    <div class="helpBody">
-      <div class="helpSection">
-        <div class="helpSectionTitle">General</div>
-        <div class="shortcutRow">
-          <div class="keys"><span class="kbd">Enter</span></div>
-          <div class="desc">Add entry</div>
+    <div class="panelBody">
+      <div class="section">
+        <div class="sectionTitle">Command mode</div>
+        <div class="rowLine">
+          <div class="keys"><span class="kbd">Ctrl</span><span class="kbd">;</span></div>
+          <div class="desc">Enter command mode (Mac: Cmd+;)</div>
         </div>
-        <div class="shortcutRow">
-          <div class="keys"><span class="kbd">Shift</span><span class="kbd">Enter</span></div>
-          <div class="desc">New line in input</div>
-        </div>
-        <div class="shortcutRow">
-          <div class="keys"><span class="kbd">Ctrl</span><span class="kbd">/</span></div>
-          <div class="desc">Focus input</div>
+        <div class="muted" style="margin-top:6px">
+          Then press one key:
         </div>
       </div>
 
-      <div class="helpSection">
-        <div class="helpSectionTitle">Filters</div>
-        <div class="shortcutRow">
-          <div class="keys"><span class="kbd">Ctrl</span><span class="kbd">Alt</span><span class="kbd">T</span></div>
-          <div class="desc">Toggle “Today only”</div>
-        </div>
-        <div class="shortcutRow">
-          <div class="keys"><span class="kbd">Ctrl</span><span class="kbd">Alt</span><span class="kbd">S</span></div>
-          <div class="desc">Toggle “Starred only”</div>
-        </div>
+      <div class="section">
+        <div class="sectionTitle">Bullets (exclusive)</div>
+        <div class="rowLine"><div class="keys"><span class="kbd">a</span></div><div class="desc">Action/Task bullet: •</div></div>
+        <div class="rowLine"><div class="keys"><span class="kbd">n</span></div><div class="desc">Note bullet: –</div></div>
+        <div class="rowLine"><div class="keys"><span class="kbd">e</span></div><div class="desc">Event bullet: ○</div></div>
+        <div class="rowLine"><div class="keys"><span class="kbd">m</span></div><div class="desc">Mood bullet: ~</div></div>
       </div>
 
-      <div class="helpSection">
-        <div class="helpSectionTitle">BuJo bullets (exclusive)</div>
-        <div class="shortcutRow">
-          <div class="keys"><span class="kbd">Ctrl</span><span class="kbd">Alt</span><span class="kbd">A</span></div>
-          <div class="desc">Task bullet: <span class="muted">•</span></div>
-        </div>
-        <div class="shortcutRow">
-          <div class="keys"><span class="kbd">Ctrl</span><span class="kbd">Alt</span><span class="kbd">N</span></div>
-          <div class="desc">Note bullet: <span class="muted">–</span></div>
-        </div>
-        <div class="shortcutRow">
-          <div class="keys"><span class="kbd">Ctrl</span><span class="kbd">Alt</span><span class="kbd">E</span></div>
-          <div class="desc">Event bullet: <span class="muted">○</span></div>
-        </div>
-        <div class="shortcutRow">
-          <div class="keys"><span class="kbd">Ctrl</span><span class="kbd">Alt</span><span class="kbd">M</span></div>
-          <div class="desc">Mood bullet: <span class="muted">~</span></div>
-        </div>
-      </div>
-
-      <div class="helpSection">
-        <div class="helpSectionTitle">Signifiers (toggles; stackable)</div>
-        <div class="shortcutRow">
-          <div class="keys"><span class="kbd">Ctrl</span><span class="kbd">Alt</span><span class="kbd">P</span></div>
-          <div class="desc">Priority: <span class="muted">*</span></div>
-        </div>
-        <div class="shortcutRow">
-          <div class="keys"><span class="kbd">Ctrl</span><span class="kbd">Alt</span><span class="kbd">I</span></div>
-          <div class="desc">Inspiration: <span class="muted">!</span></div>
-        </div>
-        <div class="shortcutRow">
-          <div class="keys"><span class="kbd">Ctrl</span><span class="kbd">Alt</span><span class="kbd">Q</span></div>
-          <div class="desc">Explore/Research: <span class="muted">?</span></div>
-        </div>
+      <div class="section">
+        <div class="sectionTitle">Signifiers (toggles; stackable)</div>
+        <div class="rowLine"><div class="keys"><span class="kbd">p</span></div><div class="desc">Priority: *</div></div>
+        <div class="rowLine"><div class="keys"><span class="kbd">i</span> / <span class="kbd">!</span></div><div class="desc">Inspiration: !</div></div>
+        <div class="rowLine"><div class="keys"><span class="kbd">q</span> / <span class="kbd">?</span></div><div class="desc">Explore: ?</div></div>
         <div class="muted" style="margin-top:8px;">
-          Order is enforced as: <span class="kbd">BULLET</span> <span class="kbd">*</span> <span class="kbd">!</span> <span class="kbd">?</span> text
+          Prefix order enforced as: <span class="kbd">*</span> <span class="kbd">!</span> <span class="kbd">?</span> then <span class="kbd">BULLET</span>
         </div>
       </div>
 
-      <div class="helpSection">
-        <div class="helpSectionTitle">Edit mode</div>
-        <div class="shortcutRow">
-          <div class="keys"><span class="kbd">Ctrl</span><span class="kbd">Enter</span></div>
-          <div class="desc">Save edit</div>
-        </div>
-        <div class="shortcutRow">
-          <div class="keys"><span class="kbd">Esc</span></div>
-          <div class="desc">Cancel edit / close help</div>
-        </div>
+      <div class="section">
+        <div class="sectionTitle">Filters (command mode)</div>
+        <div class="rowLine"><div class="keys"><span class="kbd">t</span></div><div class="desc">Toggle Today only</div></div>
+        <div class="rowLine"><div class="keys"><span class="kbd">s</span></div><div class="desc">Toggle Starred only</div></div>
+      </div>
+
+      <div class="section">
+        <div class="sectionTitle">Other</div>
+        <div class="rowLine"><div class="keys"><span class="kbd">Ctrl</span><span class="kbd">/</span></div><div class="desc">Focus input</div></div>
+        <div class="rowLine"><div class="keys"><span class="kbd">h</span></div><div class="desc">Open/close help (in command mode)</div></div>
+        <div class="rowLine"><div class="keys"><span class="kbd">o</span></div><div class="desc">Open/close menu (in command mode)</div></div>
+        <div class="rowLine"><div class="keys"><span class="kbd">Esc</span></div><div class="desc">Close panels / cancel command mode / cancel edit</div></div>
+        <div class="rowLine"><div class="keys"><span class="kbd">Ctrl</span><span class="kbd">Enter</span></div><div class="desc">Save edit</div></div>
       </div>
     </div>
   </div>
 
 <script>
 (() => {
-  const KEY = "actionLog.v3";
-  const OLD_KEYS = ["actionLog.v2","actionLog.v1"];
+  const KEY = "actionLog.v4"; // v4: UI changes + command mode + signifier-first prefix
+  const OLD_KEYS = ["actionLog.v3","actionLog.v2","actionLog.v1"];
   const UI_TODAY_ONLY   = "actionLog.ui.todayOnly";
   const UI_STARRED_ONLY = "actionLog.ui.starredOnly";
 
-  // BuJo config
+  // BuJo config (signifier-first, bullet-last)
   const BUJO = {
     defaultBullet: "•",
     bullets: { task:"•", note:"–", event:"○", mood:"~" },
     signifiers: ["*", "!", "?"], // enforced order
-    shortcuts: {
-      // Bullets (exclusive)
-      a: { kind: "bullet", value: "•" }, // action/task
-      n: { kind: "bullet", value: "–" }, // note
-      e: { kind: "bullet", value: "○" }, // event
-      m: { kind: "bullet", value: "~" }, // mood
-      // Signifiers (toggle)
-      p: { kind: "sig", value: "*" },    // priority
-      i: { kind: "sig", value: "!" },    // inspiration
-      q: { kind: "sig", value: "?" }     // explore
+    // command keys (after Ctrl+;)
+    cmd: {
+      // bullets
+      a: { kind:"bullet", value:"•" },
+      n: { kind:"bullet", value:"–" },
+      e: { kind:"bullet", value:"○" },
+      m: { kind:"bullet", value:"~" },
+      // signifiers
+      p: { kind:"sig", value:"*" },
+      i: { kind:"sig", value:"!" },
+      "!": { kind:"sig", value:"!" },
+      q: { kind:"sig", value:"?" },
+      "?": { kind:"sig", value:"?" }
     }
   };
 
   const $ = (id) => document.getElementById(id);
 
+  // Main UI
   const input = $("input");
   const addBtn = $("add");
+  const countEl = $("count");
+  const logEl = $("log");
+
+  // Panels / overlay
+  const overlay = $("overlay");
+  const cmdBadge = $("cmdBadge");
+
+  const menuBtn = $("menuBtn");
+  const menuPanel = $("menuPanel");
+  const menuClose = $("menuClose");
+
+  const helpBtn = $("helpBtn");
+  const helpPanel = $("helpPanel");
+  const helpClose = $("helpClose");
+
+  // Menu items
   const exportBtn = $("export");
   const importBtn = $("importBtn");
   const clearBtn = $("clear");
   const file = $("file");
-  const logEl = $("log");
-  const countEl = $("count");
   const todayOnlyEl = $("todayOnly");
   const starredOnlyEl = $("starredOnly");
-
-  const helpBtn = $("helpBtn");
-  const helpPanel = $("helpPanel");
-  const helpOverlay = $("helpOverlay");
-  const helpClose = $("helpClose");
 
   /** @type {{id:string, ts:number, msg:string, starred?:boolean}[]} */
   let items = [];
@@ -509,6 +585,10 @@
 
   let todayOnly = true;
   let starredOnly = false;
+
+  // Command mode state
+  let cmdMode = false;
+  let cmdTimeout = null;
 
   function pad(n){ return String(n).padStart(2,"0"); }
   function fmtDate(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
@@ -570,6 +650,49 @@
     localStorage.setItem(KEY, JSON.stringify(items));
   }
 
+  // ---------- Panel open/close ----------
+  function openOverlay(){ overlay.classList.add("open"); overlay.setAttribute("aria-hidden","false"); }
+  function closeOverlay(){ overlay.classList.remove("open"); overlay.setAttribute("aria-hidden","true"); }
+
+  function anyPanelOpen(){
+    return menuPanel.classList.contains("open") || helpPanel.classList.contains("open");
+  }
+
+  function openMenu(){
+    helpPanel.classList.remove("open");
+    menuPanel.classList.add("open");
+    openOverlay();
+  }
+  function closeMenu(){
+    menuPanel.classList.remove("open");
+    if (!anyPanelOpen()) closeOverlay();
+  }
+  function toggleMenu(){
+    if (menuPanel.classList.contains("open")) closeMenu(); else openMenu();
+  }
+
+  function openHelp(){
+    menuPanel.classList.remove("open");
+    helpPanel.classList.add("open");
+    openOverlay();
+  }
+  function closeHelp(){
+    helpPanel.classList.remove("open");
+    if (!anyPanelOpen()) closeOverlay();
+  }
+  function toggleHelp(){
+    if (helpPanel.classList.contains("open")) closeHelp(); else openHelp();
+  }
+
+  overlay.addEventListener("click", () => { closeMenu(); closeHelp(); });
+
+  menuBtn.addEventListener("click", toggleMenu);
+  menuClose.addEventListener("click", closeMenu);
+
+  helpBtn.addEventListener("click", toggleHelp);
+  helpClose.addEventListener("click", closeHelp);
+
+  // ---------- Data ops ----------
   function addEntry(msg){
     const text = (msg ?? "").trim();
     if (!text) return;
@@ -626,7 +749,7 @@
     }[c]));
   }
 
-  // Icons
+  // ---------- Icons ----------
   function iconPencil(){
     return `<svg viewBox="0 0 24 24" aria-hidden="true">
       <path d="M12 20h9"></path>
@@ -659,38 +782,11 @@
     </svg>`;
   }
 
-  // --------------------------
-  // Help panel controls
-  // --------------------------
-  function openHelp(){
-    helpOverlay.classList.add("open");
-    helpPanel.classList.add("open");
-    helpOverlay.setAttribute("aria-hidden", "false");
-  }
-  function closeHelp(){
-    helpOverlay.classList.remove("open");
-    helpPanel.classList.remove("open");
-    helpOverlay.setAttribute("aria-hidden", "true");
-  }
-  function isHelpOpen(){
-    return helpPanel.classList.contains("open");
-  }
-
-  helpBtn.addEventListener("click", () => {
-    if (isHelpOpen()) closeHelp();
-    else openHelp();
-  });
-  helpClose.addEventListener("click", closeHelp);
-  helpOverlay.addEventListener("click", closeHelp);
-
-  // --------------------------
-  // BuJo prefix manipulation
-  // --------------------------
+  // ---------- BuJo prefix manipulation (SIGNIFIERS first, then BULLET) ----------
   function getActiveTextArea(){
     const el = document.activeElement;
     if (!el) return null;
-    if (el.tagName === "TEXTAREA") return el;
-    return null;
+    return el.tagName === "TEXTAREA" ? el : null;
   }
 
   function lineBounds(text, pos){
@@ -701,33 +797,38 @@
   }
 
   function parsePrefix(line){
+    // pattern: [sig "X "]* [bullet "B "]? rest
     const bulletChars = new Set(Object.values(BUJO.bullets));
-    let i = 0;
-    let bullet = null;
     const sigs = new Set();
+    let i = 0;
 
-    if (line.length >= 2 && bulletChars.has(line[0]) && line[1] === " "){
-      bullet = line[0];
-      i = 2;
-      while (i + 1 < line.length){
-        const ch = line[i];
-        const next = line[i+1];
-        if (BUJO.signifiers.includes(ch) && next === " "){
-          sigs.add(ch);
-          i += 2;
-          continue;
-        }
-        break;
+    // parse signifiers at start
+    while (i + 1 < line.length){
+      const ch = line[i];
+      const next = line[i+1];
+      if (BUJO.signifiers.includes(ch) && next === " "){
+        sigs.add(ch);
+        i += 2;
+        continue;
       }
+      break;
     }
-    return { bullet, sigs, rest: line.slice(i), prefixLen: i };
+
+    // parse bullet
+    let bullet = null;
+    if (i + 1 < line.length && bulletChars.has(line[i]) && line[i+1] === " "){
+      bullet = line[i];
+      i += 2;
+    }
+
+    return { sigs, bullet, rest: line.slice(i), prefixLen: i };
   }
 
-  function buildPrefix(bullet, sigs){
-    const b = bullet || BUJO.defaultBullet;
+  function buildPrefix(sigs, bullet){
     const ordered = BUJO.signifiers.filter(s => sigs.has(s));
     const sigStr = ordered.length ? (ordered.join(" ") + " ") : "";
-    return `${b} ${sigStr}`;
+    const b = bullet || BUJO.defaultBullet;
+    return `${sigStr}${b} `;
   }
 
   function applyBujoToActive(kind, value){
@@ -741,18 +842,20 @@
     const line = text.slice(ls, le);
 
     const parsed = parsePrefix(line);
-    let bullet = parsed.bullet;
     const sigs = new Set(parsed.sigs);
+    let bullet = parsed.bullet;
 
     if (kind === "bullet"){
-      bullet = value;
+      bullet = value; // exclusive
     } else if (kind === "sig"){
-      if (!bullet) bullet = BUJO.defaultBullet;
       if (sigs.has(value)) sigs.delete(value);
       else sigs.add(value);
     }
 
-    const newPrefix = buildPrefix(bullet, sigs);
+    // ensure a bullet exists if any sigs are present
+    if (!bullet && (sigs.size > 0 || kind === "bullet")) bullet = bullet || BUJO.defaultBullet;
+
+    const newPrefix = (bullet ? buildPrefix(sigs, bullet) : "");
     const newLine = newPrefix + parsed.rest;
 
     const newText = text.slice(0, ls) + newLine + text.slice(le);
@@ -776,9 +879,7 @@
     return true;
   }
 
-  // --------------------------
-  // Render
-  // --------------------------
+  // ---------- Render ----------
   function render(){
     const total = items.length;
     const starredCount = items.reduce((a,x)=>a + (x.starred ? 1 : 0), 0);
@@ -836,7 +937,7 @@
               <div class="ts">${escapeHtml(fmtTime(d))}</div>
               <div class="msg">${escapeHtml(e.msg)}</div>
               <div class="actions">
-                <button class="iconbtn star ${starOn}" data-action="star" title="Star">
+                <button class="iconbtn star ${starOn}" data-action="star" title="Bookmark">
                   ${iconStar()}
                 </button>
                 <button class="iconbtn" data-action="edit" title="Edit">
@@ -855,8 +956,12 @@
               <div class="msg">
                 <textarea class="editbox" data-role="editbox">${escapeHtml(e.msg)}</textarea>
                 <div class="editrow">
-                  <button class="iconbtn ok" data-action="save" title="Save">${iconCheck()}</button>
-                  <button class="iconbtn" data-action="cancel" title="Cancel">${iconX()}</button>
+                  <button class="iconbtn ok" data-action="save" title="Save">
+                    ${iconCheck()}
+                  </button>
+                  <button class="iconbtn" data-action="cancel" title="Cancel">
+                    ${iconX()}
+                  </button>
                 </div>
               </div>
               <div class="actions"></div>
@@ -878,9 +983,7 @@
     }
   }
 
-  // --------------------------
-  // Import / Export (stars supported)
-  // --------------------------
+  // ---------- Import / Export ----------
   function exportTxt(){
     const sorted = [...items].sort((a,b)=>a.ts-b.ts);
     const lines = sorted.map(e => {
@@ -934,9 +1037,52 @@
     return imported;
   }
 
-  // --------------------------
-  // Events
-  // --------------------------
+  // ---------- Command mode ----------
+  function setCmdMode(on){
+    cmdMode = on;
+    cmdBadge.classList.toggle("on", on);
+    if (cmdTimeout) clearTimeout(cmdTimeout);
+    if (on){
+      cmdTimeout = setTimeout(() => setCmdMode(false), 2000); // auto-exit after 2s
+    }
+  }
+
+  function handleCommandKey(key){
+    const k = (key || "").toLowerCase();
+
+    // panel commands
+    if (k === "h"){ toggleHelp(); return true; }
+    if (k === "o"){ toggleMenu(); return true; }
+
+    // filter toggles
+    if (k === "t"){
+      todayOnly = !todayOnly;
+      todayOnlyEl.checked = todayOnly;
+      saveUI();
+      render();
+      return true;
+    }
+    if (k === "s"){
+      starredOnly = !starredOnly;
+      starredOnlyEl.checked = starredOnly;
+      saveUI();
+      render();
+      return true;
+    }
+
+    // bujo prefix commands (only if a textarea is active)
+    if (BUJO.cmd[k]){
+      const ta = getActiveTextArea();
+      if (!ta) return false;
+      const spec = BUJO.cmd[k];
+      applyBujoToActive(spec.kind, spec.value);
+      return true;
+    }
+
+    return false;
+  }
+
+  // ---------- Events ----------
   addBtn.addEventListener("click", () => {
     addEntry(input.value);
     input.value = "";
@@ -950,7 +1096,8 @@
     }
   });
 
-  exportBtn.addEventListener("click", exportTxt);
+  exportBtn.addEventListener("click", () => { exportTxt(); closeMenu(); });
+
   importBtn.addEventListener("click", () => file.click());
 
   file.addEventListener("change", async () => {
@@ -967,21 +1114,18 @@
 
     items = items.concat(imported);
 
-    // De-dup exact matches (ts + msg) — keep starred if either is starred
+    // de-dup (ts+msg) keep starred if either
     const map = new Map();
     for (const e of items){
       const k = e.ts + "|" + e.msg;
-      if (!map.has(k)){
-        map.set(k, e);
-      } else {
-        const prev = map.get(k);
-        prev.starred = !!(prev.starred || e.starred);
-      }
+      if (!map.has(k)) map.set(k, e);
+      else map.get(k).starred = !!(map.get(k).starred || e.starred);
     }
     items = Array.from(map.values()).sort((a,b)=>a.ts-b.ts);
 
     saveData();
     render();
+    closeMenu();
   });
 
   clearBtn.addEventListener("click", () => {
@@ -992,6 +1136,7 @@
     saveData();
     render();
     input.focus();
+    closeMenu();
   });
 
   todayOnlyEl.addEventListener("change", () => {
@@ -1006,7 +1151,7 @@
     render();
   });
 
-  // Actions in list
+  // List actions
   logEl.addEventListener("click", (e) => {
     const btn = e.target.closest("button[data-action]");
     if (!btn) return;
@@ -1055,7 +1200,7 @@
     }
   });
 
-  // Save edit with Ctrl+Enter (or Cmd+Enter); Esc cancels
+  // Edit keyboard: Ctrl+Enter save; Esc cancel
   logEl.addEventListener("keydown", (e) => {
     const box = e.target.closest('[data-role="editbox"]');
     if (!box) return;
@@ -1085,19 +1230,19 @@
     }
   });
 
-  // --------------------------
-  // Keyboard shortcuts (filters + BuJo + help)
-  // --------------------------
+  // Global keyboard
   document.addEventListener("keydown", (e) => {
     const isMac = navigator.platform.toLowerCase().includes("mac");
     const mod = isMac ? e.metaKey : e.ctrlKey;
-    const key = (e.key || "").toLowerCase();
 
-    // Esc closes help if open (and also cancels edit via handler above)
-    if (e.key === "Escape" && isHelpOpen()){
-      e.preventDefault();
-      closeHelp();
-      return;
+    // Esc closes panels and cancels command mode
+    if (e.key === "Escape"){
+      if (cmdMode){ e.preventDefault(); setCmdMode(false); return; }
+      if (menuPanel.classList.contains("open") || helpPanel.classList.contains("open")){
+        e.preventDefault();
+        closeMenu(); closeHelp();
+        return;
+      }
     }
 
     // Focus input
@@ -1107,39 +1252,25 @@
       return;
     }
 
-    // Filter shortcuts: Ctrl+Alt+T / Ctrl+Alt+S (Mac: Cmd+Option+T/S)
-    if (mod && e.altKey && key === "t"){
+    // Enter command mode: Ctrl+; (Mac Cmd+;)
+    if (mod && e.key === ";"){
       e.preventDefault();
-      todayOnly = !todayOnly;
-      todayOnlyEl.checked = todayOnly;
-      saveUI();
-      render();
-      return;
-    }
-    if (mod && e.altKey && key === "s"){
-      e.preventDefault();
-      starredOnly = !starredOnly;
-      starredOnlyEl.checked = starredOnly;
-      saveUI();
-      render();
+      setCmdMode(true);
       return;
     }
 
-    // BuJo shortcuts only when a textarea is active (input or editbox)
-    if (mod && e.altKey && BUJO.shortcuts[key]){
-      const ta = getActiveTextArea();
-      if (!ta) return;
-
+    // If in command mode, consume next key
+    if (cmdMode){
+      // ignore modifier-only keys
+      if (["Shift","Control","Alt","Meta"].includes(e.key)) return;
       e.preventDefault();
-      const spec = BUJO.shortcuts[key];
-      applyBujoToActive(spec.kind, spec.value);
+      const handled = handleCommandKey(e.key);
+      setCmdMode(false);
       return;
     }
   });
 
-  // --------------------------
-  // Init
-  // --------------------------
+  // ---------- Init ----------
   loadUI();
   loadData();
   render();
