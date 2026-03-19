@@ -219,10 +219,16 @@
     <header>
       <h1>Action Log</h1>
       <div class="hint">
-        <span class="kbd">Enter</span> add · <span class="kbd">Shift+Enter</span> newline ·
-        <span class="kbd">Ctrl+/</span> focus ·
-        <span class="kbd">Ctrl+Alt+T</span> today · <span class="kbd">Ctrl+Alt+S</span> starred ·
-        <span class="kbd">Esc</span> cancel edit · <span class="kbd">Ctrl+Enter</span> save edit
+        <div>
+          <span class="kbd">Enter</span> add · <span class="kbd">Shift+Enter</span> newline ·
+          <span class="kbd">Ctrl+/</span> focus ·
+          <span class="kbd">Ctrl+Alt+T</span> today · <span class="kbd">Ctrl+Alt+S</span> starred
+        </div>
+        <div>
+          BuJo: <span class="kbd">Ctrl+Alt+A</span> • task · <span class="kbd">N</span> – note · <span class="kbd">E</span> ○ event · <span class="kbd">M</span> ~ mood ·
+          <span class="kbd">P</span> * priority · <span class="kbd">I</span> ! idea · <span class="kbd">Q</span> ? explore ·
+          <span class="kbd">Esc</span> cancel edit · <span class="kbd">Ctrl+Enter</span> save edit
+        </div>
       </div>
     </header>
 
@@ -259,11 +265,36 @@
 
 <script>
 (() => {
-  const KEY = "actionLog.v3"; // v3: starred flag + UI prefs
+  const KEY = "actionLog.v3"; // starred flag + UI prefs
   const OLD_KEYS = ["actionLog.v2","actionLog.v1"];
 
   const UI_TODAY_ONLY   = "actionLog.ui.todayOnly";
   const UI_STARRED_ONLY = "actionLog.ui.starredOnly";
+
+  // BuJo config
+  const BUJO = {
+    defaultBullet: "•",
+    bullets: {
+      task: "•",
+      note: "–",
+      event: "○",
+      mood: "~"
+    },
+    // canonical signifier order
+    signifiers: ["*", "!", "?"],
+    // shortcuts (Ctrl+Alt / Cmd+Option)
+    shortcuts: {
+      // types
+      a: { kind: "bullet", value: "•" }, // action/task
+      n: { kind: "bullet", value: "–" }, // note
+      e: { kind: "bullet", value: "○" }, // event
+      m: { kind: "bullet", value: "~" }, // mood
+      // signifiers
+      p: { kind: "sig", value: "*" },    // priority
+      i: { kind: "sig", value: "!" },    // inspiration/idea
+      q: { kind: "sig", value: "?" }     // explore/research
+    }
+  };
 
   const $ = (id) => document.getElementById(id);
 
@@ -284,13 +315,14 @@
   let editingId = null;
 
   // Defaults
-  let todayOnly = true;     // collapse older days by default
-  let starredOnly = false;  // off by default
+  let todayOnly = true;
+  let starredOnly = false;
 
   function pad(n){ return String(n).padStart(2,"0"); }
   function fmtDate(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
-  function fmtTime(d){ return `${pad(d.getHours())}:${pad(d.getMinutes())}`; } // HH:mm (no seconds)
+  function fmtTime(d){ return `${pad(d.getHours())}:${pad(d.getMinutes())}`; } // HH:mm
   function fmtStamp(d){ return `${fmtDate(d)} ${fmtTime(d)}`; }
+  function todayYMD(){ return fmtDate(new Date()); }
 
   function uid(ts){
     return String(ts) + "-" + Math.random().toString(36).slice(2,6);
@@ -435,8 +467,121 @@
     </svg>`;
   }
 
-  function todayYMD(){ return fmtDate(new Date()); }
+  // --------------------------
+  // BuJo prefix manipulation
+  // --------------------------
+  function getActiveTextArea(){
+    const el = document.activeElement;
+    if (!el) return null;
+    if (el.tagName === "TEXTAREA") return el;
+    return null;
+  }
 
+  function lineBounds(text, pos){
+    // returns [startIndex, endIndex) for the line containing pos
+    const start = text.lastIndexOf("\n", pos - 1) + 1; // -1 => 0
+    const endIdx = text.indexOf("\n", pos);
+    const end = endIdx === -1 ? text.length : endIdx;
+    return [start, end];
+  }
+
+  function parsePrefix(line){
+    // prefix pattern: [bullet][space] [signifiers... each "X "]
+    // returns { bullet: string|null, sigs: Set<string>, rest: string }
+    let i = 0;
+    // allow leading spaces (but we keep them as part of rest to avoid weirdness)
+    // For simplicity: treat bullet only if at index 0.
+    const bulletChars = new Set(Object.values(BUJO.bullets));
+    let bullet = null;
+    let sigs = new Set();
+
+    if (line.length >= 2 && bulletChars.has(line[0]) && line[1] === " "){
+      bullet = line[0];
+      i = 2;
+      // parse signifiers like "* " "! " "? "
+      while (i + 1 <= line.length){
+        const ch = line[i];
+        const next = line[i+1];
+        if (BUJO.signifiers.includes(ch) && next === " "){
+          sigs.add(ch);
+          i += 2;
+          continue;
+        }
+        break;
+      }
+    }
+
+    const rest = line.slice(i);
+    return { bullet, sigs, rest };
+  }
+
+  function buildPrefix(bullet, sigs){
+    const b = bullet || BUJO.defaultBullet;
+    const ordered = BUJO.signifiers.filter(s => sigs.has(s));
+    const sigStr = ordered.length ? (ordered.join(" ") + " ") : "";
+    return `${b} ${sigStr}`;
+  }
+
+  function applyBujoToActive(kind, value){
+    const ta = getActiveTextArea();
+    if (!ta) return false;
+
+    // don't interfere with browser shortcuts unless our modifier family is used
+    const text = ta.value;
+    const pos = ta.selectionStart ?? text.length;
+
+    const [ls, le] = lineBounds(text, pos);
+    const line = text.slice(ls, le);
+
+    const parsed = parsePrefix(line);
+    let bullet = parsed.bullet;
+    let sigs = new Set(parsed.sigs);
+
+    if (kind === "bullet"){
+      bullet = value; // exclusive
+    } else if (kind === "sig"){
+      if (!bullet) bullet = BUJO.defaultBullet; // ensure bullet exists
+      if (sigs.has(value)) sigs.delete(value);
+      else sigs.add(value);
+    }
+
+    const newPrefix = buildPrefix(bullet, sigs);
+    const newLine = newPrefix + parsed.rest;
+
+    // Replace line in textarea
+    const newText = text.slice(0, ls) + newLine + text.slice(le);
+    const delta = newLine.length - line.length;
+
+    // Cursor handling:
+    // If cursor was within the old prefix region, move it to end of new prefix.
+    // Else preserve relative position with delta.
+    const oldPrefixLen = (parsed.bullet ? (2 + [...parsed.sigs].length * 2) : 0); // approximate; ok for our sig token pattern
+    const newPrefixLen = newPrefix.length;
+
+    let newPos = pos;
+    const offsetInLine = pos - ls;
+
+    if (parsed.bullet && offsetInLine <= oldPrefixLen){
+      newPos = ls + newPrefixLen;
+    } else if (!parsed.bullet && offsetInLine === 0){
+      newPos = ls + newPrefixLen;
+    } else {
+      newPos = pos + delta;
+      // clamp
+      newPos = Math.max(ls, Math.min(ls + newLine.length, newPos));
+    }
+
+    ta.value = newText;
+    ta.selectionStart = ta.selectionEnd = newPos;
+
+    // keep focus
+    ta.focus();
+    return true;
+  }
+
+  // --------------------------
+  // Rendering
+  // --------------------------
   function render(){
     const total = items.length;
     const starredCount = items.reduce((a,x)=>a + (x.starred ? 1 : 0), 0);
@@ -486,6 +631,7 @@
       for (const e of entries){
         const d = new Date(e.ts);
         const isEditing = (editingId === e.id);
+        const starOn = e.starred ? "on" : "";
 
         if (!isEditing){
           html += `
@@ -493,15 +639,9 @@
               <div class="ts">${escapeHtml(fmtTime(d))}</div>
               <div class="msg">${escapeHtml(e.msg)}</div>
               <div class="actions">
-                <button class="iconbtn star ${e.starred ? "on" : ""}" data-action="star" title="${e.starred ? "Unstar" : "Star"}">
-                  ${iconStar()}
-                </button>
-                <button class="iconbtn" data-action="edit" title="Edit">
-                  ${iconPencil()}
-                </button>
-                <button class="iconbtn danger" data-action="delete" title="Delete">
-                  ${iconTrash()}
-                </button>
+                <button class="iconbtn star ${starOn}" data-action="star" title="Star" aria-label="Star">${iconStar()}</button>
+                <button class="iconbtn" data-action="edit" title="Edit" aria-label="Edit">${iconPencil()}</button>
+                <button class="iconbtn danger" data-action="delete" title="Delete" aria-label="Delete">${iconTrash()}</button>
               </div>
             </div>
           `;
@@ -512,12 +652,8 @@
               <div class="msg">
                 <textarea class="editbox" data-role="editbox">${escapeHtml(e.msg)}</textarea>
                 <div class="editrow">
-                  <button class="iconbtn ok" data-action="save" title="Save">
-                    ${iconCheck()}
-                  </button>
-                  <button class="iconbtn" data-action="cancel" title="Cancel">
-                    ${iconX()}
-                  </button>
+                  <button class="iconbtn ok" data-action="save" title="Save" aria-label="Save">${iconCheck()}</button>
+                  <button class="iconbtn" data-action="cancel" title="Cancel" aria-label="Cancel">${iconX()}</button>
                 </div>
               </div>
               <div class="actions"></div>
@@ -529,6 +665,7 @@
 
     logEl.innerHTML = html;
 
+    // Focus edit box when editing
     if (editingId){
       const row = logEl.querySelector(`.entry[data-id="${CSS.escape(editingId)}"]`);
       const box = row && row.querySelector('[data-role="editbox"]');
@@ -539,6 +676,9 @@
     }
   }
 
+  // --------------------------
+  // Import / Export (stars supported)
+  // --------------------------
   function exportTxt(){
     // Oldest -> newest. Starred lines prefixed with "★ "
     const sorted = [...items].sort((a,b)=>a.ts-b.ts);
@@ -593,7 +733,9 @@
     return imported;
   }
 
-  // --- Events ---
+  // --------------------------
+  // Events
+  // --------------------------
   addBtn.addEventListener("click", () => {
     addEntry(input.value);
     input.value = "";
@@ -661,39 +803,6 @@
     starredOnly = !!starredOnlyEl.checked;
     saveUI();
     render();
-  });
-
-  // --- Keyboard shortcuts ---
-  document.addEventListener("keydown", (e) => {
-    const isMac = navigator.platform.toLowerCase().includes("mac");
-    const mod = isMac ? e.metaKey : e.ctrlKey;
-
-    // Ctrl+/ (or Cmd+/) focuses input
-    if (mod && e.key === "/"){
-      e.preventDefault();
-      input.focus();
-      return;
-    }
-
-    // Filter shortcuts: Ctrl+Alt+T / Ctrl+Alt+S (Mac: Cmd+Option+T/S)
-    // We use Alt/Option to avoid browser-reserved combos like Ctrl+S or Ctrl+T.
-    const key = (e.key || "").toLowerCase();
-    if (mod && e.altKey && key === "t"){
-      e.preventDefault();
-      todayOnly = !todayOnly;
-      todayOnlyEl.checked = todayOnly;
-      saveUI();
-      render();
-      return;
-    }
-    if (mod && e.altKey && key === "s"){
-      e.preventDefault();
-      starredOnly = !starredOnly;
-      starredOnlyEl.checked = starredOnly;
-      saveUI();
-      render();
-      return;
-    }
   });
 
   // Actions in list
@@ -772,6 +881,53 @@
       e.preventDefault();
       editingId = null;
       render();
+    }
+  });
+
+  // --------------------------
+  // Keyboard shortcuts (filters + BuJo)
+  // --------------------------
+  document.addEventListener("keydown", (e) => {
+    const isMac = navigator.platform.toLowerCase().includes("mac");
+    const mod = isMac ? e.metaKey : e.ctrlKey;
+    const key = (e.key || "").toLowerCase();
+
+    // Focus input
+    if (mod && e.key === "/"){
+      e.preventDefault();
+      input.focus();
+      return;
+    }
+
+    // Filter shortcuts: Ctrl+Alt+T / Ctrl+Alt+S (Mac: Cmd+Option+T/S)
+    if (mod && e.altKey && key === "t"){
+      e.preventDefault();
+      todayOnly = !todayOnly;
+      todayOnlyEl.checked = todayOnly;
+      saveUI();
+      render();
+      return;
+    }
+    if (mod && e.altKey && key === "s"){
+      e.preventDefault();
+      starredOnly = !starredOnly;
+      starredOnlyEl.checked = starredOnly;
+      saveUI();
+      render();
+      return;
+    }
+
+    // BuJo shortcuts only when a textarea is active (input OR editbox)
+    // Use same modifier family: Ctrl+Alt (Cmd+Option)
+    if (mod && e.altKey && BUJO.shortcuts[key]){
+      // avoid breaking in non-text contexts
+      const ta = getActiveTextArea();
+      if (!ta) return;
+
+      e.preventDefault();
+      const spec = BUJO.shortcuts[key];
+      applyBujoToActive(spec.kind, spec.value);
+      return;
     }
   });
 
