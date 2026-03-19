@@ -6,24 +6,42 @@
   <title>Action Log</title>
   <style>
     :root{
+      /* Default theme = LIGHT (as requested) */
+      --bg:#f7f9fc;
+      --text:#0b1220;
+      --muted:#51657f;
+      --accent:#1a66ff;
+      --line:#d7e0ee;
+
+      --danger:#d11f2a;
+      --ok:#137a53;
+      --star:#b77900;
+
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+
+    /* Dark theme overrides when explicitly enabled */
+    html[data-theme="dark"]{
       --bg:#0b0f14;
       --muted:#8aa0b8;
       --text:#e8f0ff;
       --accent:#4aa3ff;
       --line:#1b2a3f;
+
       --danger:#ff5a6a;
       --ok:#63e6be;
       --star:#ffd166;
-      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
     }
+
     *{box-sizing:border-box}
     body{
       margin:0;
       font-family:var(--sans);
-      background:radial-gradient(1200px 700px at 20% -10%, #13213a 0%, transparent 55%),
-                 radial-gradient(900px 600px at 100% 0%, #102033 0%, transparent 55%),
-                 var(--bg);
+      background:
+        radial-gradient(1200px 700px at 20% -10%, color-mix(in srgb, var(--accent) 14%, transparent) 0%, transparent 55%),
+        radial-gradient(900px 600px at 100% 0%, color-mix(in srgb, var(--accent) 10%, transparent) 0%, transparent 55%),
+        var(--bg);
       color:var(--text);
     }
     .wrap{max-width:860px;margin:0 auto;padding:14px 12px 36px}
@@ -45,8 +63,8 @@
       font-size:10.5px;
       padding:2px 8px;
       border-radius:999px;
-      border:1px solid rgba(74,163,255,.35);
-      background:rgba(12,19,32,.75);
+      border:1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+      background:color-mix(in srgb, var(--bg) 65%, transparent);
       color:var(--accent);
       letter-spacing:.2px;
       user-select:none;
@@ -55,7 +73,7 @@
     .dot{
       width:6px;height:6px;border-radius:999px;
       background:var(--accent);
-      box-shadow:0 0 0 3px rgba(74,163,255,.15);
+      box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
     }
 
     /* Header icon buttons */
@@ -65,13 +83,13 @@
       display:grid;place-items:center;
       border-radius:999px;
       border:1px solid var(--line);
-      background:rgba(12,19,32,.7);
+      background:color-mix(in srgb, var(--bg) 75%, transparent);
       cursor:pointer;
       padding:0;
       color:var(--text);
-      box-shadow:0 6px 18px rgba(0,0,0,.25);
+      box-shadow:0 6px 18px rgba(0,0,0,.14);
     }
-    .topBtn:hover{border-color:#2a68ff55}
+    .topBtn:hover{border-color:color-mix(in srgb, var(--accent) 35%, var(--line))}
     .topBtn:active{transform:translateY(1px)}
     .topBtn svg{width:14px;height:14px;stroke:var(--text);stroke-width:2;fill:none;opacity:.9}
 
@@ -79,10 +97,11 @@
     .overlay{
       position:fixed;
       inset:0;
-      background:rgba(0,0,0,.45);
+      background:rgba(0,0,0,.30);
       display:none;
       z-index:50;
     }
+    html[data-theme="dark"] .overlay{background:rgba(0,0,0,.45)}
     .overlay.open{display:block}
 
     .panel{
@@ -90,10 +109,10 @@
       top:64px;
       right:14px;
       width:min(520px, calc(100vw - 28px));
-      background:rgba(12,19,32,.96);
+      background:color-mix(in srgb, var(--bg) 92%, transparent);
       border:1px solid var(--line);
       border-radius:16px;
-      box-shadow:0 20px 60px rgba(0,0,0,.55);
+      box-shadow:0 20px 60px rgba(0,0,0,.30);
       z-index:60;
       display:none;
       overflow:hidden;
@@ -104,20 +123,20 @@
     .panelHead{
       display:flex;align-items:center;justify-content:space-between;
       padding:10px 12px;
-      border-bottom:1px solid rgba(27,42,63,.85);
-      background:rgba(15,22,35,.7);
+      border-bottom:1px solid color-mix(in srgb, var(--line) 85%, transparent);
+      background:color-mix(in srgb, var(--bg) 82%, transparent);
     }
     .panelTitle{font-size:12px;color:var(--text);font-family:var(--mono);letter-spacing:.2px}
     .closeBtn{
       width:26px;height:26px;
       display:grid;place-items:center;
       border-radius:10px;
-      border:1px solid rgba(27,42,63,.9);
-      background:#0c1320;
+      border:1px solid color-mix(in srgb, var(--line) 92%, transparent);
+      background:color-mix(in srgb, var(--bg) 78%, transparent);
       cursor:pointer;
       padding:0;
     }
-    .closeBtn:hover{border-color:#2a68ff55}
+    .closeBtn:hover{border-color:color-mix(in srgb, var(--accent) 35%, var(--line))}
     .closeBtn svg{width:14px;height:14px;stroke:var(--text);stroke-width:2;fill:none;opacity:.9}
 
     .panelBody{
@@ -142,15 +161,15 @@
       gap:10px;
       justify-content:space-between;
       padding:4px 0;
-      border-bottom:1px dashed rgba(27,42,63,.55);
+      border-bottom:1px dashed color-mix(in srgb, var(--line) 55%, transparent);
     }
     .rowLine:last-child{border-bottom:none}
     .keys{white-space:nowrap}
     .desc{color:var(--text);opacity:.95;flex:1;text-align:right}
     .kbd{
       display:inline-block;
-      border:1px solid rgba(27,42,63,.9);
-      background:#0c1320;
+      border:1px solid color-mix(in srgb, var(--line) 92%, transparent);
+      background:color-mix(in srgb, var(--bg) 78%, transparent);
       padding:1px 6px;
       border-radius:8px;
       margin-right:4px;
@@ -160,11 +179,11 @@
     /* Main bar */
     .bar{
       display:flex; gap:6px; flex-wrap:wrap;
-      background:rgba(15,22,35,.75);
+      background:color-mix(in srgb, var(--bg) 82%, transparent);
       border:1px solid var(--line);
       border-radius:14px;
       padding:8px;
-      box-shadow:0 10px 30px rgba(0,0,0,.25);
+      box-shadow:0 10px 30px rgba(0,0,0,.14);
       backdrop-filter: blur(8px);
       align-items:stretch;
     }
@@ -177,19 +196,22 @@
       padding:8px 10px;
       border-radius:12px;
       border:1px solid var(--line);
-      background:#0c1320;
+      background:color-mix(in srgb, var(--bg) 78%, transparent);
       color:var(--accent);
       outline:none;
       font-family:var(--mono);
       font-size:13px;
       line-height:1.25;
     }
-    textarea#input:focus{border-color:#2a68ff55; box-shadow:0 0 0 3px #2a68ff22}
+    textarea#input:focus{
+      border-color:color-mix(in srgb, var(--accent) 45%, var(--line));
+      box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+    }
 
     .btn{
       appearance:none;
       border:1px solid var(--line);
-      background:#0c1320;
+      background:color-mix(in srgb, var(--bg) 78%, transparent);
       color:var(--text);
       padding:8px 10px;
       border-radius:12px;
@@ -198,17 +220,16 @@
       transition:transform .06s ease, border-color .12s ease, background .12s ease;
       white-space:nowrap;
     }
-    .btn:hover{border-color:#2a68ff55}
+    .btn:hover{border-color:color-mix(in srgb, var(--accent) 35%, var(--line))}
     .btn:active{transform:translateY(1px)}
-    .btn.primary{border-color:#2a68ff66; background:#0d1a2b}
-
+    .btn.primary{border-color:color-mix(in srgb, var(--accent) 40%, var(--line)); background:color-mix(in srgb, var(--bg) 70%, transparent)}
     .small{font-size:11px;color:var(--muted);align-self:center}
 
     /* Mobile CMD button */
     .cmdMobile{
       display:none;
-      border-color:rgba(74,163,255,.35);
-      background:rgba(12,19,32,.85);
+      border-color:color-mix(in srgb, var(--accent) 35%, var(--line));
+      background:color-mix(in srgb, var(--bg) 70%, transparent);
       color:var(--accent);
       font-family:var(--mono);
       font-weight:700;
@@ -217,8 +238,8 @@
       padding:8px 10px;
     }
     .cmdMobile.on{
-      border-color:rgba(74,163,255,.65);
-      box-shadow:0 0 0 3px rgba(74,163,255,.18);
+      border-color:color-mix(in srgb, var(--accent) 65%, var(--line));
+      box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
     }
 
     /* Menu items */
@@ -226,8 +247,8 @@
       display:flex;align-items:center;justify-content:space-between;
       gap:10px;
       padding:8px 10px;
-      border:1px solid rgba(27,42,63,.75);
-      background:rgba(12,19,32,.6);
+      border:1px solid color-mix(in srgb, var(--line) 75%, transparent);
+      background:color-mix(in srgb, var(--bg) 70%, transparent);
       border-radius:12px;
       margin-bottom:8px;
     }
@@ -235,8 +256,8 @@
     .menuLabel{font-family:var(--mono);font-size:11px;color:var(--text)}
     .menuRight{display:flex;align-items:center;gap:8px}
     .menuBtn{
-      border:1px solid rgba(27,42,63,.9);
-      background:#0c1320;
+      border:1px solid color-mix(in srgb, var(--line) 92%, transparent);
+      background:color-mix(in srgb, var(--bg) 78%, transparent);
       color:var(--text);
       font-family:var(--mono);
       font-size:11px;
@@ -244,8 +265,8 @@
       border-radius:12px;
       cursor:pointer;
     }
-    .menuBtn:hover{border-color:#2a68ff55}
-    .menuBtn.danger{border-color:#ff5a6a55;color:#ffd1d6}
+    .menuBtn:hover{border-color:color-mix(in srgb, var(--accent) 35%, var(--line))}
+    .menuBtn.danger{border-color:color-mix(in srgb, var(--danger) 45%, var(--line)); color:color-mix(in srgb, var(--danger) 88%, var(--text))}
     .menuToggle{
       display:flex;align-items:center;gap:6px;
       font-family:var(--mono);
@@ -261,8 +282,8 @@
       border:1px solid var(--line);
       border-radius:14px;
       overflow:hidden;
-      background:rgba(15,22,35,.65);
-      box-shadow:0 10px 30px rgba(0,0,0,.25);
+      background:color-mix(in srgb, var(--bg) 78%, transparent);
+      box-shadow:0 10px 30px rgba(0,0,0,.14);
       backdrop-filter: blur(8px);
     }
 
@@ -270,7 +291,7 @@
     .day{
       border-top:1px solid var(--line);
       padding:4px 8px;
-      background:rgba(12,19,32,.6);
+      background:color-mix(in srgb, var(--bg) 72%, transparent);
       color:var(--muted);
       font-size:10.5px;
       letter-spacing:.2px;
@@ -282,12 +303,12 @@
       display:flex;
       gap:6px;
       padding:4px 8px;
-      border-top:1px dashed rgba(27,42,63,.65);
+      border-top:1px dashed color-mix(in srgb, var(--line) 65%, transparent);
       align-items:flex-start;
       font-family:var(--mono);
       font-size:11.5px;
       line-height:1.15;
-      background:rgba(15,22,35,.32);
+      background:color-mix(in srgb, var(--bg) 74%, transparent);
     }
     .entry:first-of-type{border-top:none}
 
@@ -334,12 +355,12 @@
       height:20px;
       display:grid;place-items:center;
       border-radius:7px;
-      border:1px solid rgba(27,42,63,.9);
-      background:#0c1320;
+      border:1px solid color-mix(in srgb, var(--line) 92%, transparent);
+      background:color-mix(in srgb, var(--bg) 78%, transparent);
       cursor:pointer;
       padding:0;
     }
-    .iconbtn:hover{border-color:#2a68ff55}
+    .iconbtn:hover{border-color:color-mix(in srgb, var(--accent) 35%, var(--line))}
     .iconbtn:active{transform:translateY(1px)}
     .iconbtn svg{
       width:12px;height:12px;
@@ -347,17 +368,17 @@
       stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
       opacity:.9
     }
-    .iconbtn.danger{border-color:#ff5a6a55}
-    .iconbtn.danger svg{stroke:#ffd1d6}
-    .iconbtn.ok{border-color:rgba(99,230,190,.45)}
+    .iconbtn.danger{border-color:color-mix(in srgb, var(--danger) 45%, var(--line))}
+    .iconbtn.danger svg{stroke:color-mix(in srgb, var(--danger) 88%, var(--text))}
+    .iconbtn.ok{border-color:color-mix(in srgb, var(--ok) 45%, var(--line))}
     .iconbtn.ok svg{stroke:var(--ok)}
 
-    .iconbtn.star{border-color:rgba(255,209,102,.28)}
+    .iconbtn.star{border-color:color-mix(in srgb, var(--star) 35%, var(--line))}
     .iconbtn.star svg{stroke:var(--star)}
-    .iconbtn.star.on{border-color:rgba(255,209,102,.55)}
-    .iconbtn.star.on svg{fill:rgba(255,209,102,.9); stroke:rgba(255,209,102,1)}
+    .iconbtn.star.on{border-color:color-mix(in srgb, var(--star) 60%, var(--line))}
+    .iconbtn.star.on svg{fill:color-mix(in srgb, var(--star) 85%, transparent); stroke:var(--star)}
 
-    .iconbtn.chev{border-color:rgba(138,160,184,.35)}
+    .iconbtn.chev{border-color:color-mix(in srgb, var(--muted) 35%, var(--line))}
     .iconbtn.chev svg{stroke:var(--muted)}
     .iconbtn.chev.hidden{display:none}
 
@@ -370,7 +391,7 @@
       padding:6px 8px;
       border-radius:10px;
       border:1px solid var(--line);
-      background:#0c1320;
+      background:color-mix(in srgb, var(--bg) 78%, transparent);
       color:var(--accent);
       outline:none;
       font-family:var(--mono);
@@ -427,10 +448,8 @@
 
     <div class="bar">
       <textarea id="input" placeholder="Type an action…"></textarea>
-
       <button class="btn cmdMobile" id="cmdBtnMobile" title="Command mode" aria-label="Command mode">CMD</button>
       <button class="btn primary" id="add">Add</button>
-
       <div class="small" id="count"></div>
     </div>
 
@@ -453,6 +472,16 @@
     </div>
 
     <div class="panelBody">
+      <div class="menuItem">
+        <div class="menuLabel">Light mode</div>
+        <div class="menuRight">
+          <label class="menuToggle" title="Toggle light/dark">
+            <input id="lightModeToggle" type="checkbox" />
+            On
+          </label>
+        </div>
+      </div>
+
       <div class="menuItem">
         <div class="menuLabel">Export</div>
         <div class="menuRight"><button class="menuBtn" id="export">Export .txt</button></div>
@@ -499,12 +528,11 @@
         <div class="sectionTitle">Command mode (sticky)</div>
         <div class="rowLine"><div class="keys"><span class="kbd">Ctrl</span><span class="kbd">;</span></div><div class="desc">Toggle CMD (Mac: Cmd+;)</div></div>
         <div class="rowLine"><div class="keys"><span class="kbd">Mobile</span></div><div class="desc">Tap CMD button</div></div>
-        <div class="rowLine"><div class="keys"><span class="kbd">Esc</span></div><div class="desc">Exit CMD / close panels</div></div>
       </div>
 
       <div class="section">
-        <div class="sectionTitle">Prefix (always present)</div>
-        <div class="muted">Every entry starts as: <span class="kbd">·</span><span class="kbd">␠</span><span class="kbd">•</span><span class="kbd">␠</span>text</div>
+        <div class="sectionTitle">Prefix</div>
+        <div class="muted">Format: <span class="kbd">·</span><span class="kbd">␠</span><span class="kbd">•</span><span class="kbd">␠</span>text</div>
         <div class="muted" style="margin-top:6px;">Signifiers: <span class="kbd">!</span> priority (red) · <span class="kbd">?</span> explore</div>
       </div>
 
@@ -514,10 +542,13 @@
         <div class="rowLine"><div class="keys"><span class="kbd">n</span></div><div class="desc">– note</div></div>
         <div class="rowLine"><div class="keys"><span class="kbd">e</span></div><div class="desc">○ event</div></div>
         <div class="rowLine"><div class="keys"><span class="kbd">m</span></div><div class="desc">~ mood</div></div>
+        <div class="rowLine"><div class="keys"><span class="kbd">d</span></div><div class="desc">✓ done</div></div>
+        <div class="rowLine"><div class="keys"><span class="kbd">x</span></div><div class="desc">✗ cancelled</div></div>
+        <div class="rowLine"><div class="keys"><span class="kbd">f</span></div><div class="desc">→ forward</div></div>
       </div>
 
       <div class="section">
-        <div class="sectionTitle">Signifier (max 1; CMD)</div>
+        <div class="sectionTitle">Signifier (CMD)</div>
         <div class="rowLine"><div class="keys"><span class="kbd">p</span></div><div class="desc">! priority</div></div>
         <div class="rowLine"><div class="keys"><span class="kbd">q</span> / <span class="kbd">?</span></div><div class="desc">? explore</div></div>
       </div>
@@ -533,20 +564,17 @@
         <div class="rowLine"><div class="keys"><span class="kbd">o</span></div><div class="desc">Menu</div></div>
         <div class="rowLine"><div class="keys"><span class="kbd">h</span></div><div class="desc">Help</div></div>
       </div>
-
-      <div class="section">
-        <div class="sectionTitle">Expand</div>
-        <div class="muted">Entries show 1 line. Chevron appears only if truncated.</div>
-      </div>
     </div>
   </div>
 
 <script>
 (() => {
-  const KEY = "actionLog.v11";
-  const OLD_KEYS = ["actionLog.v10","actionLog.v9","actionLog.v8","actionLog.v7","actionLog.v6","actionLog.v5","actionLog.v4","actionLog.v3","actionLog.v2","actionLog.v1"];
+  const KEY = "actionLog.v14";
+  const OLD_KEYS = ["actionLog.v13","actionLog.v12","actionLog.v11","actionLog.v10","actionLog.v9","actionLog.v8","actionLog.v7","actionLog.v6","actionLog.v5","actionLog.v4","actionLog.v3","actionLog.v2","actionLog.v1"];
+
   const UI_TODAY_ONLY   = "actionLog.ui.todayOnly";
   const UI_STARRED_ONLY = "actionLog.ui.starredOnly";
+  const UI_LIGHT_MODE   = "actionLog.ui.lightMode"; // "1" or "0"
 
   const SIG_PLACEHOLDER = "·";
   const SIG_PRIORITY = "!";
@@ -554,17 +582,13 @@
   const SIGS = new Set([SIG_PRIORITY, SIG_EXPLORE]);
 
   const DEFAULT_BULLET = "•";
-  const BULLETS = new Set(["•","–","○","~"]);
+  const BULLETS = new Set(["•","–","○","~","✓","✗","→"]);
 
-  // Robust prefix detection (prevents duplicates)
-  const PREFIX_RE = /^[·!?] [•–○~] /;
+  const PREFIX_RE = /^[·!?] [•–○~✓✗→] /;
 
-  // Strip any duplicated prefixes from the start of "rest"
   function stripLeadingPrefixes(s){
     let out = s;
-    while (PREFIX_RE.test(out)) {
-      out = out.slice(4);
-    }
+    while (PREFIX_RE.test(out)) out = out.slice(4);
     return out;
   }
 
@@ -573,9 +597,13 @@
     n: { kind:"bullet", value:"–" },
     e: { kind:"bullet", value:"○" },
     m: { kind:"bullet", value:"~" },
+    d: { kind:"bullet", value:"✓" },
+    x: { kind:"bullet", value:"✗" },
+    f: { kind:"bullet", value:"→" },
+
     p: { kind:"sig", value: SIG_PRIORITY },
     q: { kind:"sig", value: SIG_EXPLORE },
-    "?": { kind:"sig", value: SIG_EXPLORE }
+    "?": { kind:"sig", value: SIG_EXPLORE },
   };
 
   const $ = (id) => document.getElementById(id);
@@ -604,17 +632,34 @@
   const todayOnlyEl = $("todayOnly");
   const starredOnlyEl = $("starredOnly");
 
-  /** @type {{id:string, ts:number, msg:string, starred?:boolean}[]} */
-  let items = [];
-  /** @type {string|null} */
-  let editingId = null;
+  const lightModeToggle = $("lightModeToggle");
 
+  let items = [];
+  let editingId = null;
   let todayOnly = true;
   let starredOnly = false;
-
   let cmdMode = false;
 
   const expanded = new Set();
+
+  // ---- Theme (Option B): Light toggle, default LIGHT ----
+  function applyLightMode(isLight){
+    // Light is default (no attribute). Dark uses data-theme="dark".
+    document.documentElement.dataset.theme = isLight ? "" : "dark";
+  }
+  function loadLightMode(){
+    // default ON (light)
+    try{
+      const v = localStorage.getItem(UI_LIGHT_MODE);
+      if (v === "0") return false;
+      return true;
+    } catch(e){
+      return true;
+    }
+  }
+  function saveLightMode(isLight){
+    try{ localStorage.setItem(UI_LIGHT_MODE, isLight ? "1" : "0"); } catch(e){}
+  }
 
   function pad(n){ return String(n).padStart(2,"0"); }
   function fmtDate(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
@@ -635,13 +680,8 @@
   function formatMsgForDisplay(msg){
     const safe = escapeHtml(msg);
     const first = safe[0] || "";
-
-    if (first === SIG_PRIORITY){
-      return `<span class="sig sig-pri">!</span>${safe.slice(1)}`;
-    }
-    if (first === SIG_PLACEHOLDER){
-      return `<span class="sig sig-ph">·</span>${safe.slice(1)}`;
-    }
+    if (first === SIG_PRIORITY) return `<span class="sig sig-pri">!</span>${safe.slice(1)}`;
+    if (first === SIG_PLACEHOLDER) return `<span class="sig sig-ph">·</span>${safe.slice(1)}`;
     return safe;
   }
 
@@ -657,13 +697,8 @@
     if (!(s === SIG_PLACEHOLDER || SIGS.has(s))) return { has:false, sig:null, bullet:null, rest:line };
     if (!BULLETS.has(b)) return { has:false, sig:null, bullet:null, rest:line };
 
-    const rest = line.slice(4);
-    return {
-      has:true,
-      sig: SIGS.has(s) ? s : null,
-      bullet: b,
-      rest: stripLeadingPrefixes(rest) // ✅ sanitize rest to prevent duplicated prefixes
-    };
+    const rest = stripLeadingPrefixes(line.slice(4));
+    return { has:true, sig: SIGS.has(s) ? s : null, bullet:b, rest };
   }
 
   function buildPrefix(sig, bullet){
@@ -682,19 +717,16 @@
   function ensurePrefixLine(line){
     const raw = (line ?? "").toString();
 
-    // already correct
     const p = parsePrefix(raw);
     if (p.has) return buildPrefix(p.sig, p.bullet) + p.rest;
 
     const first = raw[0] || "";
     const second = raw[1] || "";
 
-    // legacy: bullet prefix "• text"
     if (BULLETS.has(first) && second === " "){
       return buildPrefix(null, first) + raw.slice(2);
     }
 
-    // legacy: "!!" priority from older version
     if (raw.startsWith("!! ")){
       if (BULLETS.has(raw[3] || "") && (raw[4] || "") === " "){
         const bullet = raw[3];
@@ -704,7 +736,6 @@
       return buildPrefix(SIG_PRIORITY, DEFAULT_BULLET) + raw.slice(3);
     }
 
-    // legacy: idea signifier "💡 " removed -> drop signifier
     if (raw.startsWith("💡 ")){
       if (BULLETS.has(raw[3] || "") && (raw[4] || "") === " "){
         const bullet = raw[3];
@@ -714,7 +745,6 @@
       return buildPrefix(null, DEFAULT_BULLET) + raw.slice(3);
     }
 
-    // legacy: old 1-char signifier + bullet
     if ((first === "*" || first === "!" || first === "?" || first === "·") && second === " " && BULLETS.has(raw[2] || "") && (raw[3] || "") === " "){
       const bullet = raw[2];
       const rest = raw.slice(4);
@@ -722,7 +752,6 @@
       return buildPrefix(sig, bullet) + stripLeadingPrefixes(rest);
     }
 
-    // default
     return buildPrefix(null, DEFAULT_BULLET) + raw;
   }
 
@@ -744,11 +773,8 @@
     let sig = parsed.sig;
     let bullet = parsed.bullet || DEFAULT_BULLET;
 
-    if (kind === "bullet"){
-      bullet = value;
-    } else if (kind === "sig"){
-      sig = (sig === value) ? null : value;
-    }
+    if (kind === "bullet") bullet = value;
+    else if (kind === "sig") sig = (sig === value) ? null : value;
 
     const newLine = buildPrefix(sig, bullet) + stripLeadingPrefixes(parsed.rest);
     const newText = text.slice(0, ls) + newLine + text.slice(le);
@@ -926,7 +952,6 @@
       const spec = CMD_MAP[k];
       return applyCmdToActive(spec.kind, spec.value);
     }
-
     return false;
   }
 
@@ -940,14 +965,13 @@
   function iconStar(){ return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 17.3l-6.18 3.64 1.64-7.03L2 9.24l7.19-.61L12 2l2.81 6.63 7.19.61-5.46 4.67 1.64 7.03z"></path></svg>`; }
   function iconPencil(){ return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path></svg>`; }
   function iconTrash(){ return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>`; }
-  function iconCheck(){ return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg>`; }
-  function iconX(){ return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18"></path><path d="M6 6l12 12"></path></svg>`; }
   function iconChevronDown(){ return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>`; }
   function iconChevronUp(){ return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 15l-6-6-6 6"></path></svg>`; }
+  function iconCheck(){ return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg>`; }
+  function iconX(){ return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18"></path><path d="M6 6l12 12"></path></svg>`; }
 
   function render(){
     expanded.clear();
-
     const total = items.length;
     const starredCount = items.reduce((a,x)=>a + (x.starred ? 1 : 0), 0);
     countEl.textContent = `${total} entr${total===1?"y":"ies"} · ${starredCount}★`;
@@ -1003,15 +1027,9 @@
                   ${iconChevronDown()}
                 </button>
                 <div class="actions">
-                  <button class="iconbtn star ${starOn}" data-action="star" title="Star" aria-label="Star">
-                    ${iconStar()}
-                  </button>
-                  <button class="iconbtn" data-action="edit" title="Edit" aria-label="Edit">
-                    ${iconPencil()}
-                  </button>
-                  <button class="iconbtn danger" data-action="delete" title="Delete" aria-label="Delete">
-                    ${iconTrash()}
-                  </button>
+                  <button class="iconbtn star ${starOn}" data-action="star" title="Star" aria-label="Star">${iconStar()}</button>
+                  <button class="iconbtn" data-action="edit" title="Edit" aria-label="Edit">${iconPencil()}</button>
+                  <button class="iconbtn danger" data-action="delete" title="Delete" aria-label="Delete">${iconTrash()}</button>
                 </div>
               </div>
             </div>
@@ -1107,6 +1125,7 @@
     return imported;
   }
 
+  // ---- Event wiring ----
   addBtn.addEventListener("click", () => {
     addEntry(input.value);
     input.value = "";
@@ -1266,15 +1285,19 @@
     }
   });
 
-  // Panel helpers
-  function closeMenu(){ menuPanel.classList.remove("open"); if (!anyPanelOpen()) closeOverlay(); }
-  function closeHelp(){ helpPanel.classList.remove("open"); if (!anyPanelOpen()) closeOverlay(); }
-  function anyPanelOpen(){ return menuPanel.classList.contains("open") || helpPanel.classList.contains("open"); }
+  // ---- Theme toggle wiring (Light default) ----
+  const initialLight = loadLightMode();
+  applyLightMode(initialLight);
+  if (lightModeToggle){
+    lightModeToggle.checked = initialLight;
+    lightModeToggle.addEventListener("change", () => {
+      const isLight = !!lightModeToggle.checked;
+      saveLightMode(isLight);
+      applyLightMode(isLight);
+    });
+  }
 
-  function openOverlay(){ overlay.classList.add("open"); overlay.setAttribute("aria-hidden","false"); }
-  function closeOverlay(){ overlay.classList.remove("open"); overlay.setAttribute("aria-hidden","true"); }
-
-  // Init
+  // ---- Init ----
   loadUI();
   loadData();
   setCmdMode(false);
