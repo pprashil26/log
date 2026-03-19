@@ -291,7 +291,6 @@
     }
     .entry:first-of-type{border-top:none}
 
-    /* Message + right side cluster */
     .msg{
       color:var(--text);
       flex:1;
@@ -358,15 +357,13 @@
     .iconbtn.star.on{border-color:rgba(255,209,102,.55)}
     .iconbtn.star.on svg{fill:rgba(255,209,102,.9); stroke:rgba(255,209,102,1)}
 
-    /* Chevron */
     .iconbtn.chev{border-color:rgba(138,160,184,.35)}
     .iconbtn.chev svg{stroke:var(--muted)}
     .iconbtn.chev.hidden{display:none}
 
-    /* Minimal signifier emphasis */
     .sig { opacity:.95; }
     .sig-ph { color: var(--muted); opacity:.65; }
-    .sig-pri { color: var(--danger); font-weight:900; } /* ! in red */
+    .sig-pri { color: var(--danger); font-weight:900; }
 
     .editbox{
       width:100%;
@@ -546,28 +543,36 @@
 
 <script>
 (() => {
-  const KEY = "actionLog.v10";
-  const OLD_KEYS = ["actionLog.v9","actionLog.v8","actionLog.v7","actionLog.v6","actionLog.v5","actionLog.v4","actionLog.v3","actionLog.v2","actionLog.v1"];
+  const KEY = "actionLog.v11";
+  const OLD_KEYS = ["actionLog.v10","actionLog.v9","actionLog.v8","actionLog.v7","actionLog.v6","actionLog.v5","actionLog.v4","actionLog.v3","actionLog.v2","actionLog.v1"];
   const UI_TODAY_ONLY   = "actionLog.ui.todayOnly";
   const UI_STARRED_ONLY = "actionLog.ui.starredOnly";
 
-  const SIG_PLACEHOLDER = "·";               // placeholder
-  const SIG_PRIORITY = "!";                  // priority (red)
-  const SIG_EXPLORE = "?";                   // explore
+  const SIG_PLACEHOLDER = "·";
+  const SIG_PRIORITY = "!";
+  const SIG_EXPLORE = "?";
   const SIGS = new Set([SIG_PRIORITY, SIG_EXPLORE]);
 
   const DEFAULT_BULLET = "•";
   const BULLETS = new Set(["•","–","○","~"]);
 
-  // CMD mappings (idea removed)
+  // Robust prefix detection (prevents duplicates)
+  const PREFIX_RE = /^[·!?] [•–○~] /;
+
+  // Strip any duplicated prefixes from the start of "rest"
+  function stripLeadingPrefixes(s){
+    let out = s;
+    while (PREFIX_RE.test(out)) {
+      out = out.slice(4);
+    }
+    return out;
+  }
+
   const CMD_MAP = {
-    // bullets
     a: { kind:"bullet", value:"•" },
     n: { kind:"bullet", value:"–" },
     e: { kind:"bullet", value:"○" },
     m: { kind:"bullet", value:"~" },
-
-    // signifier
     p: { kind:"sig", value: SIG_PRIORITY },
     q: { kind:"sig", value: SIG_EXPLORE },
     "?": { kind:"sig", value: SIG_EXPLORE }
@@ -609,12 +614,11 @@
 
   let cmdMode = false;
 
-  // expanded state (not persisted)
   const expanded = new Set();
 
   function pad(n){ return String(n).padStart(2,"0"); }
   function fmtDate(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
-  function fmtTime(d){ return `${pad(d.getHours())}:${pad(d.getMinutes())}`; } // HH:mm
+  function fmtTime(d){ return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
   function fmtStamp(d){ return `${fmtDate(d)} ${fmtTime(d)}`; }
   function todayYMD(){ return fmtDate(new Date()); }
 
@@ -628,7 +632,6 @@
     }[c]));
   }
 
-  // Display-only formatter: color priority "!" red
   function formatMsgForDisplay(msg){
     const safe = escapeHtml(msg);
     const first = safe[0] || "";
@@ -639,11 +642,9 @@
     if (first === SIG_PLACEHOLDER){
       return `<span class="sig sig-ph">·</span>${safe.slice(1)}`;
     }
-    // explore "?" and others remain normal
     return safe;
   }
 
-  // -------- Prefix rules (always: [sigOrPlaceholder][space][bullet][space]) --------
   function parsePrefix(line){
     if (line.length < 4) return { has:false, sig:null, bullet:null, rest:line };
 
@@ -656,11 +657,12 @@
     if (!(s === SIG_PLACEHOLDER || SIGS.has(s))) return { has:false, sig:null, bullet:null, rest:line };
     if (!BULLETS.has(b)) return { has:false, sig:null, bullet:null, rest:line };
 
+    const rest = line.slice(4);
     return {
       has:true,
       sig: SIGS.has(s) ? s : null,
       bullet: b,
-      rest: line.slice(4)
+      rest: stripLeadingPrefixes(rest) // ✅ sanitize rest to prevent duplicated prefixes
     };
   }
 
@@ -680,50 +682,47 @@
   function ensurePrefixLine(line){
     const raw = (line ?? "").toString();
 
-    // Already correct
+    // already correct
     const p = parsePrefix(raw);
-    if (p.has) return raw;
+    if (p.has) return buildPrefix(p.sig, p.bullet) + p.rest;
 
     const first = raw[0] || "";
     const second = raw[1] || "";
 
-    // Legacy: bullet prefix "• text"
+    // legacy: bullet prefix "• text"
     if (BULLETS.has(first) && second === " "){
       return buildPrefix(null, first) + raw.slice(2);
     }
 
-    // Legacy: old 2-char priority "!!" -> convert to "!"
+    // legacy: "!!" priority from older version
     if (raw.startsWith("!! ")){
-      // "!! • " old
       if (BULLETS.has(raw[3] || "") && (raw[4] || "") === " "){
         const bullet = raw[3];
         const rest = raw.slice(5);
-        return buildPrefix(SIG_PRIORITY, bullet) + rest;
+        return buildPrefix(SIG_PRIORITY, bullet) + stripLeadingPrefixes(rest);
       }
-      // "!! something"
       return buildPrefix(SIG_PRIORITY, DEFAULT_BULLET) + raw.slice(3);
     }
 
-    // Legacy: old idea signifier "💡 " -> remove (placeholder) OR keep bullet if present
+    // legacy: idea signifier "💡 " removed -> drop signifier
     if (raw.startsWith("💡 ")){
       if (BULLETS.has(raw[3] || "") && (raw[4] || "") === " "){
         const bullet = raw[3];
         const rest = raw.slice(5);
-        return buildPrefix(null, bullet) + rest;
+        return buildPrefix(null, bullet) + stripLeadingPrefixes(rest);
       }
       return buildPrefix(null, DEFAULT_BULLET) + raw.slice(3);
     }
 
-    // Legacy: old 1-char signifier + bullet: "* •", "! •", "? •"
+    // legacy: old 1-char signifier + bullet
     if ((first === "*" || first === "!" || first === "?" || first === "·") && second === " " && BULLETS.has(raw[2] || "") && (raw[3] || "") === " "){
       const bullet = raw[2];
       const rest = raw.slice(4);
-      // map "*" -> "!" now
       const sig = (first === "*" || first === "!") ? SIG_PRIORITY : (first === "?" ? SIG_EXPLORE : null);
-      return buildPrefix(sig, bullet) + rest;
+      return buildPrefix(sig, bullet) + stripLeadingPrefixes(rest);
     }
 
-    // Default
+    // default
     return buildPrefix(null, DEFAULT_BULLET) + raw;
   }
 
@@ -742,20 +741,20 @@
     const ensured = ensurePrefixLine(line);
     const parsed = parsePrefix(ensured);
 
-    let sig = parsed.sig;                   // null or '!' or '?'
+    let sig = parsed.sig;
     let bullet = parsed.bullet || DEFAULT_BULLET;
 
     if (kind === "bullet"){
       bullet = value;
     } else if (kind === "sig"){
-      sig = (sig === value) ? null : value; // toggle/replace
+      sig = (sig === value) ? null : value;
     }
 
-    const newLine = buildPrefix(sig, bullet) + parsed.rest;
+    const newLine = buildPrefix(sig, bullet) + stripLeadingPrefixes(parsed.rest);
     const newText = text.slice(0, ls) + newLine + text.slice(le);
 
     const offset = pos - ls;
-    const oldPrefixLen = parsePrefix(ensured).has ? 4 : 0;
+    const oldPrefixLen = PREFIX_RE.test(ensured) ? 4 : 0;
     const newPrefixLen = 4;
 
     let newPos;
@@ -772,7 +771,6 @@
     return true;
   }
 
-  // -------- UI prefs --------
   function loadUI(){
     try{
       const t = localStorage.getItem(UI_TODAY_ONLY);
@@ -789,7 +787,6 @@
     localStorage.setItem(UI_STARRED_ONLY, starredOnly ? "1" : "0");
   }
 
-  // -------- Data --------
   function normalize(arr){
     if (!Array.isArray(arr)) return [];
     return arr
@@ -876,36 +873,17 @@
     return out;
   }
 
-  // -------- Panels --------
   function openOverlay(){ overlay.classList.add("open"); overlay.setAttribute("aria-hidden","false"); }
   function closeOverlay(){ overlay.classList.remove("open"); overlay.setAttribute("aria-hidden","true"); }
   function anyPanelOpen(){ return menuPanel.classList.contains("open") || helpPanel.classList.contains("open"); }
 
-  function openMenu(){
-    helpPanel.classList.remove("open");
-    menuPanel.classList.add("open");
-    openOverlay();
-  }
-  function closeMenu(){
-    menuPanel.classList.remove("open");
-    if (!anyPanelOpen()) closeOverlay();
-  }
-  function toggleMenu(){
-    if (menuPanel.classList.contains("open")) closeMenu(); else openMenu();
-  }
+  function openMenu(){ helpPanel.classList.remove("open"); menuPanel.classList.add("open"); openOverlay(); }
+  function closeMenu(){ menuPanel.classList.remove("open"); if (!anyPanelOpen()) closeOverlay(); }
+  function toggleMenu(){ if (menuPanel.classList.contains("open")) closeMenu(); else openMenu(); }
 
-  function openHelp(){
-    menuPanel.classList.remove("open");
-    helpPanel.classList.add("open");
-    openOverlay();
-  }
-  function closeHelp(){
-    helpPanel.classList.remove("open");
-    if (!anyPanelOpen()) closeOverlay();
-  }
-  function toggleHelp(){
-    if (helpPanel.classList.contains("open")) closeHelp(); else openHelp();
-  }
+  function openHelp(){ menuPanel.classList.remove("open"); helpPanel.classList.add("open"); openOverlay(); }
+  function closeHelp(){ helpPanel.classList.remove("open"); if (!anyPanelOpen()) closeOverlay(); }
+  function toggleHelp(){ if (helpPanel.classList.contains("open")) closeHelp(); else openHelp(); }
 
   overlay.addEventListener("click", () => { closeMenu(); closeHelp(); });
   menuBtn.addEventListener("click", toggleMenu);
@@ -913,7 +891,6 @@
   helpBtn.addEventListener("click", toggleHelp);
   helpClose.addEventListener("click", closeHelp);
 
-  // -------- CMD mode --------
   function setCmdMode(on){
     cmdMode = on;
     cmdBadge.classList.toggle("on", on);
@@ -953,7 +930,6 @@
     return false;
   }
 
-  // Mobile CMD button listener (single)
   if (cmdBtnMobile){
     cmdBtnMobile.addEventListener("click", () => {
       setCmdMode(!cmdMode);
@@ -961,41 +937,14 @@
     });
   }
 
-  // -------- Icons --------
-  function iconStar(){
-    return `<svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 17.3l-6.18 3.64 1.64-7.03L2 9.24l7.19-.61L12 2l2.81 6.63 7.19.61-5.46 4.67 1.64 7.03z"></path>
-    </svg>`;
-  }
-  function iconPencil(){
-    return `<svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 20h9"></path>
-      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
-    </svg>`;
-  }
-  function iconTrash(){
-    return `<svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M3 6h18"></path>
-      <path d="M8 6V4h8v2"></path>
-      <path d="M19 6l-1 14H6L5 6"></path>
-      <path d="M10 11v6"></path>
-      <path d="M14 11v6"></path>
-    </svg>`;
-  }
-  function iconCheck(){
-    return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg>`;
-  }
-  function iconX(){
-    return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18"></path><path d="M6 6l12 12"></path></svg>`;
-  }
-  function iconChevronDown(){
-    return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>`;
-  }
-  function iconChevronUp(){
-    return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 15l-6-6-6 6"></path></svg>`;
-  }
+  function iconStar(){ return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 17.3l-6.18 3.64 1.64-7.03L2 9.24l7.19-.61L12 2l2.81 6.63 7.19.61-5.46 4.67 1.64 7.03z"></path></svg>`; }
+  function iconPencil(){ return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path></svg>`; }
+  function iconTrash(){ return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>`; }
+  function iconCheck(){ return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg>`; }
+  function iconX(){ return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18"></path><path d="M6 6l12 12"></path></svg>`; }
+  function iconChevronDown(){ return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>`; }
+  function iconChevronUp(){ return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 15l-6-6-6 6"></path></svg>`; }
 
-  // -------- Render (timestamp right + chevron only if truncated) --------
   function render(){
     expanded.clear();
 
@@ -1101,7 +1050,6 @@
     });
   }
 
-  // -------- Export / Import --------
   function exportTxt(){
     const sorted = [...items].sort((a,b)=>a.ts-b.ts);
     const lines = sorted.map(e => {
@@ -1159,7 +1107,6 @@
     return imported;
   }
 
-  // -------- Events --------
   addBtn.addEventListener("click", () => {
     addEntry(input.value);
     input.value = "";
@@ -1174,7 +1121,6 @@
       if (handled) setCmdMode(false);
       return;
     }
-
     if (e.key === "Enter" && !e.shiftKey){
       e.preventDefault();
       addBtn.click();
@@ -1235,7 +1181,6 @@
     render();
   });
 
-  // Log actions
   logEl.addEventListener("click", (e) => {
     const btn = e.target.closest("button[data-action]");
     if (!btn) return;
@@ -1249,48 +1194,30 @@
 
     if (action === "toggleExpand"){
       const msgEl = row.querySelector('[data-role="msg"]');
-      const chev = btn;
       if (!msgEl) return;
 
       const isExpanded = msgEl.classList.contains("expanded");
       if (isExpanded){
         msgEl.classList.remove("expanded");
         msgEl.classList.add("collapsed");
-        chev.innerHTML = iconChevronDown();
+        btn.innerHTML = iconChevronDown();
       } else {
         msgEl.classList.remove("collapsed");
         msgEl.classList.add("expanded");
-        chev.innerHTML = iconChevronUp();
+        btn.innerHTML = iconChevronUp();
       }
       return;
     }
 
-    if (action === "star"){
-      toggleStar(id);
-      render();
-      return;
-    }
-
-    if (action === "edit"){
-      editingId = id;
-      render();
-      return;
-    }
-
-    if (action === "cancel"){
-      editingId = null;
-      render();
-      return;
-    }
+    if (action === "star"){ toggleStar(id); render(); return; }
+    if (action === "edit"){ editingId = id; render(); return; }
+    if (action === "cancel"){ editingId = null; render(); return; }
 
     if (action === "save"){
       const box = row.querySelector('[data-role="editbox"]');
       const newMsg = box ? box.value : "";
       const ok = updateEntry(id, newMsg);
-      if (!ok){
-        alert("Entry cannot be empty.");
-        return;
-      }
+      if (!ok){ alert("Entry cannot be empty."); return; }
       editingId = null;
       render();
       return;
@@ -1305,7 +1232,6 @@
     }
   });
 
-  // Desktop CMD shortcuts
   document.addEventListener("keydown", (e) => {
     const isMac = navigator.platform.toLowerCase().includes("mac");
     const mod = isMac ? e.metaKey : e.ctrlKey;
@@ -1340,51 +1266,15 @@
     }
   });
 
-  // Mobile CMD button listener (single)
-  if (cmdBtnMobile){
-    cmdBtnMobile.addEventListener("click", () => {
-      setCmdMode(!cmdMode);
-      input.focus();
-    });
-  }
+  // Panel helpers
+  function closeMenu(){ menuPanel.classList.remove("open"); if (!anyPanelOpen()) closeOverlay(); }
+  function closeHelp(){ helpPanel.classList.remove("open"); if (!anyPanelOpen()) closeOverlay(); }
+  function anyPanelOpen(){ return menuPanel.classList.contains("open") || helpPanel.classList.contains("open"); }
 
-  // Panel helper wrappers
-  function closeMenu(){
-    menuPanel.classList.remove("open");
-    if (!anyPanelOpen()) closeOverlay();
-  }
-  function closeHelp(){
-    helpPanel.classList.remove("open");
-    if (!anyPanelOpen()) closeOverlay();
-  }
-  function anyPanelOpen(){
-    return menuPanel.classList.contains("open") || helpPanel.classList.contains("open");
-  }
-
-  // Export/import/filters/clear in menu
-  // (already wired)
-
-  // Toggle panels
-  menuBtn.addEventListener("click", toggleMenu);
-  menuClose.addEventListener("click", closeMenu);
-  helpBtn.addEventListener("click", toggleHelp);
-  helpClose.addEventListener("click", closeHelp);
-  overlay.addEventListener("click", () => { closeMenu(); closeHelp(); });
-
-  function openMenu(){ helpPanel.classList.remove("open"); menuPanel.classList.add("open"); openOverlay(); }
-  function toggleMenu(){ if (menuPanel.classList.contains("open")) closeMenu(); else openMenu(); }
-  function openHelp(){ menuPanel.classList.remove("open"); helpPanel.classList.add("open"); openOverlay(); }
-  function toggleHelp(){ if (helpPanel.classList.contains("open")) closeHelp(); else openHelp(); }
-
-  // overlay helpers
   function openOverlay(){ overlay.classList.add("open"); overlay.setAttribute("aria-hidden","false"); }
   function closeOverlay(){ overlay.classList.remove("open"); overlay.setAttribute("aria-hidden","true"); }
 
-  // Export/import hooks
-  exportBtn.addEventListener("click", () => { exportTxt(); closeMenu(); });
-  importBtn.addEventListener("click", () => file.click());
-
-  // Load/save init
+  // Init
   loadUI();
   loadData();
   setCmdMode(false);
