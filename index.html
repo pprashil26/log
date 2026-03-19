@@ -14,6 +14,7 @@
       --danger:#ff5a6a;
       --ok:#63e6be;
       --star:#ffd166;
+      --panel:#0c1320;
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
     }
@@ -27,11 +28,116 @@
       color:var(--text);
     }
     .wrap{max-width:860px;margin:0 auto;padding:14px 12px 36px}
-    header{display:flex;gap:10px;align-items:baseline;justify-content:space-between;margin:6px 0 10px}
-    h1{margin:0;font-size:16px;letter-spacing:.2px}
-    .hint{color:var(--muted);font-size:11px;line-height:1.25}
-    .kbd{font-family:var(--mono);border:1px solid var(--line);padding:0 5px;border-radius:8px;background:#0c1320;color:var(--text)}
 
+    header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin:6px 0 10px;
+      position:relative;
+    }
+    h1{margin:0;font-size:16px;letter-spacing:.2px}
+
+    /* Help icon */
+    .helpBtn{
+      width:26px;height:26px;
+      display:grid;place-items:center;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:rgba(12,19,32,.7);
+      cursor:pointer;
+      padding:0;
+      color:var(--text);
+      box-shadow:0 6px 18px rgba(0,0,0,.25);
+    }
+    .helpBtn:hover{border-color:#2a68ff55}
+    .helpBtn:active{transform:translateY(1px)}
+    .helpBtn svg{width:14px;height:14px;stroke:var(--text);stroke-width:2;fill:none;opacity:.9}
+
+    /* Help overlay */
+    .overlay{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.45);
+      display:none;
+      z-index:50;
+    }
+    .overlay.open{display:block}
+
+    .helpPanel{
+      position:fixed;
+      top:64px;
+      right:14px;
+      width:min(520px, calc(100vw - 28px));
+      background:rgba(12,19,32,.96);
+      border:1px solid var(--line);
+      border-radius:16px;
+      box-shadow:0 20px 60px rgba(0,0,0,.55);
+      z-index:60;
+      display:none;
+      overflow:hidden;
+      backdrop-filter: blur(10px);
+    }
+    .helpPanel.open{display:block}
+
+    .helpHead{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:10px 12px;
+      border-bottom:1px solid rgba(27,42,63,.85);
+      background:rgba(15,22,35,.7);
+    }
+    .helpTitle{font-size:12px;color:var(--text);font-family:var(--mono);letter-spacing:.2px}
+    .closeBtn{
+      width:26px;height:26px;
+      display:grid;place-items:center;
+      border-radius:10px;
+      border:1px solid rgba(27,42,63,.9);
+      background:#0c1320;
+      cursor:pointer;
+      padding:0;
+    }
+    .closeBtn:hover{border-color:#2a68ff55}
+    .closeBtn svg{width:14px;height:14px;stroke:var(--text);stroke-width:2;fill:none;opacity:.9}
+
+    .helpBody{
+      padding:10px 12px 12px;
+      font-family:var(--mono);
+      font-size:11px;
+      color:var(--text);
+      line-height:1.35;
+    }
+    .helpBody .muted{color:var(--muted)}
+    .helpSection{margin-top:10px}
+    .helpSection:first-child{margin-top:0}
+    .helpSectionTitle{
+      color:var(--muted);
+      font-size:10.5px;
+      letter-spacing:.2px;
+      margin-bottom:6px;
+      text-transform:uppercase;
+    }
+    .shortcutRow{
+      display:flex;
+      gap:10px;
+      justify-content:space-between;
+      padding:4px 0;
+      border-bottom:1px dashed rgba(27,42,63,.55);
+    }
+    .shortcutRow:last-child{border-bottom:none}
+    .keys{white-space:nowrap}
+    .desc{color:var(--text);opacity:.95;flex:1;text-align:right}
+    .kbd{
+      display:inline-block;
+      border:1px solid rgba(27,42,63,.9);
+      background:#0c1320;
+      padding:1px 6px;
+      border-radius:8px;
+      margin-right:4px;
+      color:var(--text);
+    }
+
+    /* Main bar */
     .bar{
       display:flex; gap:6px; flex-wrap:wrap;
       background:rgba(15,22,35,.75);
@@ -101,7 +207,7 @@
       backdrop-filter: blur(8px);
     }
 
-    /* --- Ultra dense entries --- */
+    /* Ultra dense list */
     .day{
       border-top:1px solid var(--line);
       padding:4px 8px;
@@ -134,7 +240,6 @@
       opacity:.92;
     }
 
-    /* Wrapped messages */
     .msg{
       white-space:pre-wrap;
       word-break:break-word;
@@ -142,7 +247,6 @@
       flex:1;
     }
 
-    /* Actions always visible, tiny */
     .actions{
       display:flex;
       gap:3px;
@@ -176,7 +280,6 @@
     .iconbtn.ok{border-color:rgba(99,230,190,.45)}
     .iconbtn.ok svg{stroke:var(--ok)}
 
-    /* Star styling */
     .iconbtn.star{border-color:rgba(255,209,102,.28)}
     .iconbtn.star svg{stroke:var(--star)}
     .iconbtn.star.on{border-color:rgba(255,209,102,.55)}
@@ -204,13 +307,13 @@
     @media (max-width:520px){
       .wrap{padding:12px 10px 30px}
       textarea#input{font-size:16px}
-      header{flex-direction:column;gap:5px;align-items:flex-start}
       .btn{padding:8px 9px}
       .entry{padding:4px 6px;font-size:11.5px}
       .day{padding:4px 6px}
       .ts{min-width:50px}
       .iconbtn{width:22px;height:22px}
       .iconbtn svg{width:13px;height:13px}
+      .helpPanel{top:56px; right:10px}
     }
   </style>
 </head>
@@ -218,18 +321,15 @@
   <div class="wrap">
     <header>
       <h1>Action Log</h1>
-      <div class="hint">
-        <div>
-          <span class="kbd">Enter</span> add · <span class="kbd">Shift+Enter</span> newline ·
-          <span class="kbd">Ctrl+/</span> focus ·
-          <span class="kbd">Ctrl+Alt+T</span> today · <span class="kbd">Ctrl+Alt+S</span> starred
-        </div>
-        <div>
-          BuJo: <span class="kbd">Ctrl+Alt+A</span> • task · <span class="kbd">N</span> – note · <span class="kbd">E</span> ○ event · <span class="kbd">M</span> ~ mood ·
-          <span class="kbd">P</span> * priority · <span class="kbd">I</span> ! idea · <span class="kbd">Q</span> ? explore ·
-          <span class="kbd">Esc</span> cancel edit · <span class="kbd">Ctrl+Enter</span> save edit
-        </div>
-      </div>
+
+      <!-- Small help icon -->
+      <button class="helpBtn" id="helpBtn" title="Keyboard shortcuts" aria-label="Keyboard shortcuts" aria-haspopup="dialog" aria-controls="helpPanel">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 18h.01"></path>
+          <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"></path>
+          <path d="M12 22a10 10 0 1 0-10-10 10 10 0 0 0 10 10z"></path>
+        </svg>
+      </button>
     </header>
 
     <div class="bar">
@@ -240,12 +340,12 @@
         <button class="btn" id="export">Export .txt</button>
         <button class="btn" id="importBtn">Import .txt</button>
 
-        <label class="toggle" title="Show only today's entries (shortcut: Ctrl+Alt+T / Cmd+Option+T)">
+        <label class="toggle" title="Show only today's entries (shortcut in help)">
           <input id="todayOnly" type="checkbox" />
           Today only
         </label>
 
-        <label class="toggle" title="Show only starred entries (shortcut: Ctrl+Alt+S / Cmd+Option+S)">
+        <label class="toggle" title="Show only starred entries (shortcut in help)">
           <input id="starredOnly" type="checkbox" />
           Starred only
         </label>
@@ -263,36 +363,124 @@
     </div>
   </div>
 
+  <!-- Help overlay + panel -->
+  <div class="overlay" id="helpOverlay" aria-hidden="true"></div>
+
+  <div class="helpPanel" id="helpPanel" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
+    <div class="helpHead">
+      <div class="helpTitle">Keyboard shortcuts <span class="muted">(Win/Linux: Ctrl+Alt · Mac: Cmd+Option)</span></div>
+      <button class="closeBtn" id="helpClose" aria-label="Close help">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M18 6L6 18"></path>
+          <path d="M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+
+    <div class="helpBody">
+      <div class="helpSection">
+        <div class="helpSectionTitle">General</div>
+        <div class="shortcutRow">
+          <div class="keys"><span class="kbd">Enter</span></div>
+          <div class="desc">Add entry</div>
+        </div>
+        <div class="shortcutRow">
+          <div class="keys"><span class="kbd">Shift</span><span class="kbd">Enter</span></div>
+          <div class="desc">New line in input</div>
+        </div>
+        <div class="shortcutRow">
+          <div class="keys"><span class="kbd">Ctrl</span><span class="kbd">/</span></div>
+          <div class="desc">Focus input</div>
+        </div>
+      </div>
+
+      <div class="helpSection">
+        <div class="helpSectionTitle">Filters</div>
+        <div class="shortcutRow">
+          <div class="keys"><span class="kbd">Ctrl</span><span class="kbd">Alt</span><span class="kbd">T</span></div>
+          <div class="desc">Toggle “Today only”</div>
+        </div>
+        <div class="shortcutRow">
+          <div class="keys"><span class="kbd">Ctrl</span><span class="kbd">Alt</span><span class="kbd">S</span></div>
+          <div class="desc">Toggle “Starred only”</div>
+        </div>
+      </div>
+
+      <div class="helpSection">
+        <div class="helpSectionTitle">BuJo bullets (exclusive)</div>
+        <div class="shortcutRow">
+          <div class="keys"><span class="kbd">Ctrl</span><span class="kbd">Alt</span><span class="kbd">A</span></div>
+          <div class="desc">Task bullet: <span class="muted">•</span></div>
+        </div>
+        <div class="shortcutRow">
+          <div class="keys"><span class="kbd">Ctrl</span><span class="kbd">Alt</span><span class="kbd">N</span></div>
+          <div class="desc">Note bullet: <span class="muted">–</span></div>
+        </div>
+        <div class="shortcutRow">
+          <div class="keys"><span class="kbd">Ctrl</span><span class="kbd">Alt</span><span class="kbd">E</span></div>
+          <div class="desc">Event bullet: <span class="muted">○</span></div>
+        </div>
+        <div class="shortcutRow">
+          <div class="keys"><span class="kbd">Ctrl</span><span class="kbd">Alt</span><span class="kbd">M</span></div>
+          <div class="desc">Mood bullet: <span class="muted">~</span></div>
+        </div>
+      </div>
+
+      <div class="helpSection">
+        <div class="helpSectionTitle">Signifiers (toggles; stackable)</div>
+        <div class="shortcutRow">
+          <div class="keys"><span class="kbd">Ctrl</span><span class="kbd">Alt</span><span class="kbd">P</span></div>
+          <div class="desc">Priority: <span class="muted">*</span></div>
+        </div>
+        <div class="shortcutRow">
+          <div class="keys"><span class="kbd">Ctrl</span><span class="kbd">Alt</span><span class="kbd">I</span></div>
+          <div class="desc">Inspiration: <span class="muted">!</span></div>
+        </div>
+        <div class="shortcutRow">
+          <div class="keys"><span class="kbd">Ctrl</span><span class="kbd">Alt</span><span class="kbd">Q</span></div>
+          <div class="desc">Explore/Research: <span class="muted">?</span></div>
+        </div>
+        <div class="muted" style="margin-top:8px;">
+          Order is enforced as: <span class="kbd">BULLET</span> <span class="kbd">*</span> <span class="kbd">!</span> <span class="kbd">?</span> text
+        </div>
+      </div>
+
+      <div class="helpSection">
+        <div class="helpSectionTitle">Edit mode</div>
+        <div class="shortcutRow">
+          <div class="keys"><span class="kbd">Ctrl</span><span class="kbd">Enter</span></div>
+          <div class="desc">Save edit</div>
+        </div>
+        <div class="shortcutRow">
+          <div class="keys"><span class="kbd">Esc</span></div>
+          <div class="desc">Cancel edit / close help</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 <script>
 (() => {
-  const KEY = "actionLog.v3"; // starred flag + UI prefs
+  const KEY = "actionLog.v3";
   const OLD_KEYS = ["actionLog.v2","actionLog.v1"];
-
   const UI_TODAY_ONLY   = "actionLog.ui.todayOnly";
   const UI_STARRED_ONLY = "actionLog.ui.starredOnly";
 
   // BuJo config
   const BUJO = {
     defaultBullet: "•",
-    bullets: {
-      task: "•",
-      note: "–",
-      event: "○",
-      mood: "~"
-    },
-    // canonical signifier order
-    signifiers: ["*", "!", "?"],
-    // shortcuts (Ctrl+Alt / Cmd+Option)
+    bullets: { task:"•", note:"–", event:"○", mood:"~" },
+    signifiers: ["*", "!", "?"], // enforced order
     shortcuts: {
-      // types
+      // Bullets (exclusive)
       a: { kind: "bullet", value: "•" }, // action/task
       n: { kind: "bullet", value: "–" }, // note
       e: { kind: "bullet", value: "○" }, // event
       m: { kind: "bullet", value: "~" }, // mood
-      // signifiers
+      // Signifiers (toggle)
       p: { kind: "sig", value: "*" },    // priority
-      i: { kind: "sig", value: "!" },    // inspiration/idea
-      q: { kind: "sig", value: "?" }     // explore/research
+      i: { kind: "sig", value: "!" },    // inspiration
+      q: { kind: "sig", value: "?" }     // explore
     }
   };
 
@@ -309,12 +497,16 @@
   const todayOnlyEl = $("todayOnly");
   const starredOnlyEl = $("starredOnly");
 
+  const helpBtn = $("helpBtn");
+  const helpPanel = $("helpPanel");
+  const helpOverlay = $("helpOverlay");
+  const helpClose = $("helpClose");
+
   /** @type {{id:string, ts:number, msg:string, starred?:boolean}[]} */
   let items = [];
   /** @type {string|null} */
   let editingId = null;
 
-  // Defaults
   let todayOnly = true;
   let starredOnly = false;
 
@@ -371,7 +563,7 @@
     } catch(e){
       items = [];
     }
-    saveData(); // finalize into v3
+    saveData();
   }
 
   function saveData(){
@@ -468,6 +660,30 @@
   }
 
   // --------------------------
+  // Help panel controls
+  // --------------------------
+  function openHelp(){
+    helpOverlay.classList.add("open");
+    helpPanel.classList.add("open");
+    helpOverlay.setAttribute("aria-hidden", "false");
+  }
+  function closeHelp(){
+    helpOverlay.classList.remove("open");
+    helpPanel.classList.remove("open");
+    helpOverlay.setAttribute("aria-hidden", "true");
+  }
+  function isHelpOpen(){
+    return helpPanel.classList.contains("open");
+  }
+
+  helpBtn.addEventListener("click", () => {
+    if (isHelpOpen()) closeHelp();
+    else openHelp();
+  });
+  helpClose.addEventListener("click", closeHelp);
+  helpOverlay.addEventListener("click", closeHelp);
+
+  // --------------------------
   // BuJo prefix manipulation
   // --------------------------
   function getActiveTextArea(){
@@ -478,28 +694,22 @@
   }
 
   function lineBounds(text, pos){
-    // returns [startIndex, endIndex) for the line containing pos
-    const start = text.lastIndexOf("\n", pos - 1) + 1; // -1 => 0
+    const start = text.lastIndexOf("\n", pos - 1) + 1;
     const endIdx = text.indexOf("\n", pos);
     const end = endIdx === -1 ? text.length : endIdx;
     return [start, end];
   }
 
   function parsePrefix(line){
-    // prefix pattern: [bullet][space] [signifiers... each "X "]
-    // returns { bullet: string|null, sigs: Set<string>, rest: string }
-    let i = 0;
-    // allow leading spaces (but we keep them as part of rest to avoid weirdness)
-    // For simplicity: treat bullet only if at index 0.
     const bulletChars = new Set(Object.values(BUJO.bullets));
+    let i = 0;
     let bullet = null;
-    let sigs = new Set();
+    const sigs = new Set();
 
     if (line.length >= 2 && bulletChars.has(line[0]) && line[1] === " "){
       bullet = line[0];
       i = 2;
-      // parse signifiers like "* " "! " "? "
-      while (i + 1 <= line.length){
+      while (i + 1 < line.length){
         const ch = line[i];
         const next = line[i+1];
         if (BUJO.signifiers.includes(ch) && next === " "){
@@ -510,9 +720,7 @@
         break;
       }
     }
-
-    const rest = line.slice(i);
-    return { bullet, sigs, rest };
+    return { bullet, sigs, rest: line.slice(i), prefixLen: i };
   }
 
   function buildPrefix(bullet, sigs){
@@ -526,7 +734,6 @@
     const ta = getActiveTextArea();
     if (!ta) return false;
 
-    // don't interfere with browser shortcuts unless our modifier family is used
     const text = ta.value;
     const pos = ta.selectionStart ?? text.length;
 
@@ -535,12 +742,12 @@
 
     const parsed = parsePrefix(line);
     let bullet = parsed.bullet;
-    let sigs = new Set(parsed.sigs);
+    const sigs = new Set(parsed.sigs);
 
     if (kind === "bullet"){
-      bullet = value; // exclusive
+      bullet = value;
     } else if (kind === "sig"){
-      if (!bullet) bullet = BUJO.defaultBullet; // ensure bullet exists
+      if (!bullet) bullet = BUJO.defaultBullet;
       if (sigs.has(value)) sigs.delete(value);
       else sigs.add(value);
     }
@@ -548,39 +755,29 @@
     const newPrefix = buildPrefix(bullet, sigs);
     const newLine = newPrefix + parsed.rest;
 
-    // Replace line in textarea
     const newText = text.slice(0, ls) + newLine + text.slice(le);
     const delta = newLine.length - line.length;
 
-    // Cursor handling:
-    // If cursor was within the old prefix region, move it to end of new prefix.
-    // Else preserve relative position with delta.
-    const oldPrefixLen = (parsed.bullet ? (2 + [...parsed.sigs].length * 2) : 0); // approximate; ok for our sig token pattern
+    const offsetInLine = pos - ls;
+    const oldPrefixLen = parsed.prefixLen;
     const newPrefixLen = newPrefix.length;
 
-    let newPos = pos;
-    const offsetInLine = pos - ls;
-
-    if (parsed.bullet && offsetInLine <= oldPrefixLen){
-      newPos = ls + newPrefixLen;
-    } else if (!parsed.bullet && offsetInLine === 0){
+    let newPos;
+    if (offsetInLine <= oldPrefixLen){
       newPos = ls + newPrefixLen;
     } else {
       newPos = pos + delta;
-      // clamp
       newPos = Math.max(ls, Math.min(ls + newLine.length, newPos));
     }
 
     ta.value = newText;
     ta.selectionStart = ta.selectionEnd = newPos;
-
-    // keep focus
     ta.focus();
     return true;
   }
 
   // --------------------------
-  // Rendering
+  // Render
   // --------------------------
   function render(){
     const total = items.length;
@@ -639,9 +836,15 @@
               <div class="ts">${escapeHtml(fmtTime(d))}</div>
               <div class="msg">${escapeHtml(e.msg)}</div>
               <div class="actions">
-                <button class="iconbtn star ${starOn}" data-action="star" title="Star" aria-label="Star">${iconStar()}</button>
-                <button class="iconbtn" data-action="edit" title="Edit" aria-label="Edit">${iconPencil()}</button>
-                <button class="iconbtn danger" data-action="delete" title="Delete" aria-label="Delete">${iconTrash()}</button>
+                <button class="iconbtn star ${starOn}" data-action="star" title="Star">
+                  ${iconStar()}
+                </button>
+                <button class="iconbtn" data-action="edit" title="Edit">
+                  ${iconPencil()}
+                </button>
+                <button class="iconbtn danger" data-action="delete" title="Delete">
+                  ${iconTrash()}
+                </button>
               </div>
             </div>
           `;
@@ -652,8 +855,8 @@
               <div class="msg">
                 <textarea class="editbox" data-role="editbox">${escapeHtml(e.msg)}</textarea>
                 <div class="editrow">
-                  <button class="iconbtn ok" data-action="save" title="Save" aria-label="Save">${iconCheck()}</button>
-                  <button class="iconbtn" data-action="cancel" title="Cancel" aria-label="Cancel">${iconX()}</button>
+                  <button class="iconbtn ok" data-action="save" title="Save">${iconCheck()}</button>
+                  <button class="iconbtn" data-action="cancel" title="Cancel">${iconX()}</button>
                 </div>
               </div>
               <div class="actions"></div>
@@ -665,7 +868,6 @@
 
     logEl.innerHTML = html;
 
-    // Focus edit box when editing
     if (editingId){
       const row = logEl.querySelector(`.entry[data-id="${CSS.escape(editingId)}"]`);
       const box = row && row.querySelector('[data-role="editbox"]');
@@ -680,7 +882,6 @@
   // Import / Export (stars supported)
   // --------------------------
   function exportTxt(){
-    // Oldest -> newest. Starred lines prefixed with "★ "
     const sorted = [...items].sort((a,b)=>a.ts-b.ts);
     const lines = sorted.map(e => {
       const starPrefix = e.starred ? "★ " : "";
@@ -885,12 +1086,19 @@
   });
 
   // --------------------------
-  // Keyboard shortcuts (filters + BuJo)
+  // Keyboard shortcuts (filters + BuJo + help)
   // --------------------------
   document.addEventListener("keydown", (e) => {
     const isMac = navigator.platform.toLowerCase().includes("mac");
     const mod = isMac ? e.metaKey : e.ctrlKey;
     const key = (e.key || "").toLowerCase();
+
+    // Esc closes help if open (and also cancels edit via handler above)
+    if (e.key === "Escape" && isHelpOpen()){
+      e.preventDefault();
+      closeHelp();
+      return;
+    }
 
     // Focus input
     if (mod && e.key === "/"){
@@ -917,10 +1125,8 @@
       return;
     }
 
-    // BuJo shortcuts only when a textarea is active (input OR editbox)
-    // Use same modifier family: Ctrl+Alt (Cmd+Option)
+    // BuJo shortcuts only when a textarea is active (input or editbox)
     if (mod && e.altKey && BUJO.shortcuts[key]){
-      // avoid breaking in non-text contexts
       const ta = getActiveTextArea();
       if (!ta) return;
 
@@ -931,7 +1137,9 @@
     }
   });
 
+  // --------------------------
   // Init
+  // --------------------------
   loadUI();
   loadData();
   render();
