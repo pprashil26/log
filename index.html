@@ -297,13 +297,11 @@
       flex:1;
       min-width:0;
     }
-    /* collapsed: 1 line only */
     .msg.collapsed{
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
     }
-    /* expanded: show full text (wrapping + newlines) */
     .msg.expanded{
       white-space:pre-wrap;
       overflow:visible;
@@ -555,12 +553,10 @@
 
   // CMD mappings
   const CMD_MAP = {
-    // bullets
     a: { kind:"bullet", value:"•" },
     n: { kind:"bullet", value:"–" },
     e: { kind:"bullet", value:"○" },
     m: { kind:"bullet", value:"~" },
-    // signifier (single-select toggle)
     p: { kind:"sig", value:"*" },
     i: { kind:"sig", value:"!" },
     "!": { kind:"sig", value:"!" },
@@ -617,6 +613,7 @@
     return String(ts) + "-" + Math.random().toString(36).slice(2,6);
   }
 
+  // ✅ FIXED escapeHtml
   function escapeHtml(s){
     return s.replace(/[&<>"']/g, c => ({
       "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
@@ -625,10 +622,6 @@
 
   // -------- Prefix rules (always: [sigOrPlaceholder][space][bullet][space]) --------
   function parsePrefix(line){
-    // Accepts:
-    // "· • rest"
-    // "* • rest"
-    // "• rest" (legacy) -> treated separately in normalize
     if (line.length < 4) return { has:false, sig:null, bullet:null, rest:line };
 
     const s = line[0];
@@ -664,17 +657,12 @@
   function ensurePrefixLine(line){
     const raw = (line ?? "").toString();
 
-    // Already in new format
     const p = parsePrefix(raw);
     if (p.has) return raw;
 
-    // Legacy patterns we migrate:
-    // 1) "* ! ?" old style not expected; we only support 1 signifier now.
-    // 2) "* • text" or "* text" or "• text"
     const first = raw[0] || "";
     const second = raw[1] || "";
 
-    // If starts with signifier + space + bullet + space
     if (SIGS.has(first) && second === " " && BULLETS.has(raw[2] || "") && (raw[3] || "") === " "){
       const sig = first;
       const bullet = raw[2];
@@ -682,21 +670,18 @@
       return buildPrefix(sig, bullet) + rest;
     }
 
-    // If starts with signifier + space (no bullet)
     if (SIGS.has(first) && second === " "){
       const sig = first;
       const rest = raw.slice(2);
       return buildPrefix(sig, DEFAULT_BULLET) + rest;
     }
 
-    // If starts with bullet + space
     if (BULLETS.has(first) && second === " "){
       const bullet = first;
       const rest = raw.slice(2);
       return buildPrefix(null, bullet) + rest;
     }
 
-    // Default: prefix + line
     return buildPrefix(null, DEFAULT_BULLET) + raw;
   }
 
@@ -707,7 +692,6 @@
     const text = ta.value;
     const pos = ta.selectionStart ?? text.length;
 
-    // operate on current line (so edit boxes also work)
     const ls = text.lastIndexOf("\n", pos - 1) + 1;
     const leTmp = text.indexOf("\n", pos);
     const le = leTmp === -1 ? text.length : leTmp;
@@ -716,19 +700,18 @@
     const ensured = ensurePrefixLine(line);
     const parsed = parsePrefix(ensured);
 
-    let sig = parsed.sig;           // null | * ! ?
+    let sig = parsed.sig;
     let bullet = parsed.bullet || DEFAULT_BULLET;
 
     if (kind === "bullet"){
       bullet = value;
     } else if (kind === "sig"){
-      sig = (sig === value) ? null : value; // toggle/replace
+      sig = (sig === value) ? null : value;
     }
 
     const newLine = buildPrefix(sig, bullet) + parsed.rest;
     const newText = text.slice(0, ls) + newLine + text.slice(le);
 
-    // cursor: if inside prefix region, jump to end of prefix
     const offset = pos - ls;
     const oldPrefixLen = parsePrefix(ensured).has ? 4 : 0;
     const newPrefixLen = 4;
@@ -902,11 +885,9 @@
   function handleCommandKey(key){
     const k = (key || "").toLowerCase();
 
-    // CMD-only panel controls
     if (k === "o"){ toggleMenu(); return true; }
     if (k === "h"){ toggleHelp(); return true; }
 
-    // filters
     if (k === "t"){
       todayOnly = !todayOnly;
       todayOnlyEl.checked = todayOnly;
@@ -922,7 +903,6 @@
       return true;
     }
 
-    // prefix edits (bullets/signifiers)
     if (CMD_MAP[k]){
       const spec = CMD_MAP[k];
       return applyCmdToActive(spec.kind, spec.value);
@@ -931,6 +911,7 @@
     return false;
   }
 
+  // ✅ FIXED: only ONE mobile CMD button listener
   if (cmdBtnMobile){
     cmdBtnMobile.addEventListener("click", () => {
       setCmdMode(!cmdMode);
@@ -974,7 +955,6 @@
 
   // -------- Render (timestamp right + chevron only if truncated) --------
   function render(){
-    // collapse all on refresh/render cycle (Q4: A)
     expanded.clear();
 
     const total = items.length;
@@ -1066,7 +1046,6 @@
 
     logEl.innerHTML = html;
 
-    // show chevrons only for entries that actually truncate (Q2: A)
     requestAnimationFrame(() => {
       const rows = logEl.querySelectorAll(".entry");
       rows.forEach(row => {
@@ -1074,7 +1053,6 @@
         const chev = row.querySelector('button[data-action="toggleExpand"]');
         if (!msgEl || !chev) return;
 
-        // collapsed state measurement
         const isOverflow = msgEl.scrollWidth > msgEl.clientWidth;
         if (isOverflow) chev.classList.remove("hidden");
         else chev.classList.add("hidden");
@@ -1082,7 +1060,7 @@
     });
   }
 
-  // -------- Export / Import (keeps prefixes as stored) --------
+  // -------- Export / Import --------
   function exportTxt(){
     const sorted = [...items].sort((a,b)=>a.ts-b.ts);
     const lines = sorted.map(e => {
@@ -1179,7 +1157,6 @@
 
     items = items.concat(imported);
 
-    // de-dup (ts+msg), keep starred if either
     const map = new Map();
     for (const e of items){
       const k = e.ts + "|" + e.msg;
@@ -1217,7 +1194,7 @@
     render();
   });
 
-  // Log actions: expand chevron + star/edit/delete/save/cancel
+  // Log actions
   logEl.addEventListener("click", (e) => {
     const btn = e.target.closest("button[data-action]");
     if (!btn) return;
@@ -1331,14 +1308,12 @@
       }
     }
 
-    // Focus input
     if (mod && e.key === "/"){
       e.preventDefault();
       input.focus();
       return;
     }
 
-    // Toggle CMD: Ctrl+;
     if (mod && e.key === ";"){
       e.preventDefault();
       setCmdMode(!cmdMode);
@@ -1349,21 +1324,12 @@
       if (["Shift","Control","Alt","Meta"].includes(e.key)) return;
       e.preventDefault();
       const handled = handleCommandKey(e.key);
-      if (handled) setCmdMode(false); // sticky: valid key exits
+      if (handled) setCmdMode(false);
       return;
     }
   });
 
-  // Mobile CMD button
-  if (cmdBtnMobile){
-    cmdBtnMobile.addEventListener("click", () => {
-      setCmdMode(!cmdMode);
-      input.focus();
-    });
-  }
-
-  // Menu / Help buttons (already wired)
-  // Panel helpers used above:
+  // Panel helper wrappers (used by events above)
   function closeMenu(){
     menuPanel.classList.remove("open");
     if (!anyPanelOpen()) closeOverlay();
@@ -1375,9 +1341,6 @@
   function anyPanelOpen(){
     return menuPanel.classList.contains("open") || helpPanel.classList.contains("open");
   }
-
-  // Export/import/filters/clear in menu
-  // (already wired)
 
   // -------- Init --------
   loadUI();
