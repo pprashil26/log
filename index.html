@@ -34,7 +34,6 @@
       justify-content:space-between;
       gap:10px;
       margin:6px 0 10px;
-      position:relative;
     }
     .titleRow{display:flex;align-items:center;gap:8px}
     h1{margin:0;font-size:16px;letter-spacing:.2px}
@@ -201,7 +200,6 @@
     .btn:hover{border-color:#2a68ff55}
     .btn:active{transform:translateY(1px)}
     .btn.primary{border-color:#2a68ff66; background:#0d1a2b}
-    .btn.danger{border-color:#ff5a6a55;color:#ffd1d6}
 
     .small{font-size:11px;color:var(--muted);align-self:center}
 
@@ -295,8 +293,6 @@
       gap:3px;
       align-items:flex-start;
       padding-top:0;
-      opacity:1;
-      pointer-events:auto;
       flex:0 0 auto;
     }
 
@@ -438,11 +434,11 @@
       <div class="menuItem">
         <div class="menuLabel">Filters</div>
         <div class="menuRight" style="gap:14px">
-          <label class="menuToggle" title="Command mode: Ctrl+; then t">
+          <label class="menuToggle" title="CMD: Ctrl+; then t">
             <input id="todayOnly" type="checkbox" />
             Today
           </label>
-          <label class="menuToggle" title="Command mode: Ctrl+; then s">
+          <label class="menuToggle" title="CMD: Ctrl+; then s">
             <input id="starredOnly" type="checkbox" />
             Starred
           </label>
@@ -457,8 +453,7 @@
       </div>
 
       <div class="muted" style="margin-top:10px;">
-        Tip: <span class="kbd">Ctrl</span><span class="kbd">;</span> toggles CMD mode.
-        Press <span class="kbd">Esc</span> to exit CMD.
+        Tip: <span class="kbd">Ctrl</span><span class="kbd">;</span> toggles CMD mode. <span class="kbd">Esc</span> exits.
       </div>
     </div>
   </div>
@@ -486,9 +481,6 @@
           <div class="keys"><span class="kbd">Esc</span></div>
           <div class="desc">Exit CMD mode / close panels</div>
         </div>
-        <div class="muted" style="margin-top:6px">
-          In CMD mode, type one command key (invalid keys are ignored).
-        </div>
       </div>
 
       <div class="section">
@@ -500,23 +492,23 @@
       </div>
 
       <div class="section">
-        <div class="sectionTitle">Signifiers (toggles; stackable)</div>
-        <div class="rowLine"><div class="keys"><span class="kbd">p</span></div><div class="desc">Priority: *</div></div>
-        <div class="rowLine"><div class="keys"><span class="kbd">i</span> / <span class="kbd">!</span></div><div class="desc">Inspiration: !</div></div>
-        <div class="rowLine"><div class="keys"><span class="kbd">q</span> / <span class="kbd">?</span></div><div class="desc">Explore: ?</div></div>
+        <div class="sectionTitle">Signifier (max 1; toggles)</div>
+        <div class="rowLine"><div class="keys"><span class="kbd">p</span></div><div class="desc">Priority signifier: *</div></div>
+        <div class="rowLine"><div class="keys"><span class="kbd">i</span> / <span class="kbd">!</span></div><div class="desc">Inspiration signifier: !</div></div>
+        <div class="rowLine"><div class="keys"><span class="kbd">q</span> / <span class="kbd">?</span></div><div class="desc">Explore signifier: ?</div></div>
         <div class="muted" style="margin-top:8px;">
-          Prefix order enforced as: <span class="kbd">*</span> <span class="kbd">!</span> <span class="kbd">?</span> then <span class="kbd">BULLET</span>
+          Bullet alignment: signifier slot shows <span class="kbd">·</span> when empty → <span class="kbd">·</span><span class="kbd">␠</span><span class="kbd">BULLET</span><span class="kbd">␠</span>
         </div>
       </div>
 
       <div class="section">
-        <div class="sectionTitle">Filters (command mode)</div>
+        <div class="sectionTitle">Filters (CMD)</div>
         <div class="rowLine"><div class="keys"><span class="kbd">t</span></div><div class="desc">Toggle Today only</div></div>
         <div class="rowLine"><div class="keys"><span class="kbd">s</span></div><div class="desc">Toggle Starred only</div></div>
       </div>
 
       <div class="section">
-        <div class="sectionTitle">Panels (command mode)</div>
+        <div class="sectionTitle">Panels (CMD)</div>
         <div class="rowLine"><div class="keys"><span class="kbd">o</span></div><div class="desc">Open/close menu</div></div>
         <div class="rowLine"><div class="keys"><span class="kbd">h</span></div><div class="desc">Open/close help</div></div>
       </div>
@@ -531,24 +523,26 @@
 
 <script>
 (() => {
-  const KEY = "actionLog.v4";
-  const OLD_KEYS = ["actionLog.v3","actionLog.v2","actionLog.v1"];
+  const KEY = "actionLog.v6"; // v6: placeholder signifier slot + aligned bullet + fixed action buttons
+  const OLD_KEYS = ["actionLog.v5","actionLog.v4","actionLog.v3","actionLog.v2","actionLog.v1"];
   const UI_TODAY_ONLY   = "actionLog.ui.todayOnly";
   const UI_STARRED_ONLY = "actionLog.ui.starredOnly";
 
-  // BuJo config (signifier-first, bullet-last)
+  // Signifier placeholder (keeps bullet alignment visible)
+  const SIG_PLACEHOLDER = "·"; // visible placeholder (1 char)
+
+  // BuJo config (max 1 signifier, fixed-width signifier slot)
   const BUJO = {
     defaultBullet: "•",
     bullets: { task:"•", note:"–", event:"○", mood:"~" },
-    signifiers: ["*", "!", "?"], // enforced order
-    // command keys (after Ctrl+;)
+    signifiers: ["*", "!", "?"], // max 1 of these at a time
     cmd: {
       // bullets
       a: { kind:"bullet", value:"•" },
       n: { kind:"bullet", value:"–" },
       e: { kind:"bullet", value:"○" },
       m: { kind:"bullet", value:"~" },
-      // signifiers
+      // signifier (single-select toggle)
       p: { kind:"sig", value:"*" },
       i: { kind:"sig", value:"!" },
       "!": { kind:"sig", value:"!" },
@@ -565,7 +559,7 @@
   const countEl = $("count");
   const logEl = $("log");
 
-  // Panels / overlay
+  // Overlay/panels
   const overlay = $("overlay");
   const cmdBadge = $("cmdBadge");
 
@@ -577,7 +571,7 @@
   const helpPanel = $("helpPanel");
   const helpClose = $("helpClose");
 
-  // Menu items
+  // Menu controls
   const exportBtn = $("export");
   const importBtn = $("importBtn");
   const clearBtn = $("clear");
@@ -593,7 +587,7 @@
   let todayOnly = true;
   let starredOnly = false;
 
-  // Command mode state (sticky)
+  // Command mode (sticky)
   let cmdMode = false;
 
   function pad(n){ return String(n).padStart(2,"0"); }
@@ -788,7 +782,7 @@
     </svg>`;
   }
 
-  // ---------- BuJo prefix manipulation (SIGNIFIERS first, then BULLET) ----------
+  // ---------- BuJo prefix manipulation (FIXED slot, max 1 signifier + placeholder) ----------
   function getActiveTextArea(){
     const el = document.activeElement;
     if (!el) return null;
@@ -802,37 +796,34 @@
     return [start, end];
   }
 
-  function parsePrefix(line){
-    // pattern: [sig "X "]* [bullet "B "]? rest
+  function parsePrefixFixed(line){
+    // Fixed prefix format when prefix exists:
+    // [sig | placeholder][space][bullet][space]rest
+    // Examples:
+    // "* • text"
+    // "· • text"  (placeholder)
     const bulletChars = new Set(Object.values(BUJO.bullets));
-    const sigs = new Set();
-    let i = 0;
+    const signSet = new Set(BUJO.signifiers);
 
-    while (i + 1 < line.length){
-      const ch = line[i];
-      const next = line[i+1];
-      if (BUJO.signifiers.includes(ch) && next === " "){
-        sigs.add(ch);
-        i += 2;
-        continue;
-      }
-      break;
-    }
+    if (line.length < 4) return { hasPrefix:false, sig:null, bullet:null, rest:line, prefixLen:0 };
 
-    let bullet = null;
-    if (i + 1 < line.length && bulletChars.has(line[i]) && line[i+1] === " "){
-      bullet = line[i];
-      i += 2;
-    }
+    const slotChar = line[0];
+    const slotOk = (line[1] === " ") && (signSet.has(slotChar) || slotChar === SIG_PLACEHOLDER);
 
-    return { sigs, bullet, rest: line.slice(i), prefixLen: i };
+    if (!slotOk) return { hasPrefix:false, sig:null, bullet:null, rest:line, prefixLen:0 };
+
+    const b = line[2];
+    const bOk = bulletChars.has(b) && line[3] === " ";
+    if (!bOk) return { hasPrefix:false, sig:null, bullet:null, rest:line, prefixLen:0 };
+
+    const sig = signSet.has(slotChar) ? slotChar : null; // placeholder => null signifier
+    return { hasPrefix:true, sig, bullet:b, rest: line.slice(4), prefixLen:4 };
   }
 
-  function buildPrefix(sigs, bullet){
-    const ordered = BUJO.signifiers.filter(s => sigs.has(s));
-    const sigStr = ordered.length ? (ordered.join(" ") + " ") : "";
-    const b = bullet || BUJO.defaultBullet;
-    return `${sigStr}${b} `;
+  function buildPrefixFixed(sig, bullet){
+    if (!bullet) return "";
+    const slot = (sig ? sig : SIG_PLACEHOLDER) + " "; // always 2 chars
+    return slot + bullet + " ";
   }
 
   function applyBujoToActive(kind, value){
@@ -845,34 +836,34 @@
     const [ls, le] = lineBounds(text, pos);
     const line = text.slice(ls, le);
 
-    const parsed = parsePrefix(line);
-    const sigs = new Set(parsed.sigs);
+    const parsed = parsePrefixFixed(line);
+    let sig = parsed.sig;
     let bullet = parsed.bullet;
 
     if (kind === "bullet"){
-      bullet = value; // exclusive
+      bullet = value;
+      if (!sig) sig = null; // keep signifier as-is (null means placeholder shows)
     } else if (kind === "sig"){
-      if (sigs.has(value)) sigs.delete(value);
-      else sigs.add(value);
+      sig = (sig === value) ? null : value; // toggle/replace
+      if (!bullet) bullet = BUJO.defaultBullet; // ensure bullet exists if adding sig
     }
 
-    // ensure a bullet exists if we have any sigs
-    if (!bullet && sigs.size > 0) bullet = BUJO.defaultBullet;
-
-    const newPrefix = bullet ? buildPrefix(sigs, bullet) : "";
-    const newLine = newPrefix + parsed.rest;
+    const newPrefix = bullet ? buildPrefixFixed(sig, bullet) : "";
+    const newLine = newPrefix + (parsed.hasPrefix ? parsed.rest : line);
 
     const newText = text.slice(0, ls) + newLine + text.slice(le);
-    const delta = newLine.length - line.length;
 
     const offsetInLine = pos - ls;
     const oldPrefixLen = parsed.prefixLen;
     const newPrefixLen = newPrefix.length;
 
     let newPos;
-    if (offsetInLine <= oldPrefixLen){
+    if (parsed.hasPrefix && offsetInLine <= oldPrefixLen){
+      newPos = ls + newPrefixLen;
+    } else if (!parsed.hasPrefix && offsetInLine === 0 && newPrefixLen > 0){
       newPos = ls + newPrefixLen;
     } else {
+      const delta = newLine.length - line.length;
       newPos = pos + delta;
       newPos = Math.max(ls, Math.min(ls + newLine.length, newPos));
     }
@@ -897,12 +888,8 @@
     const t = todayYMD();
     let filtered = items;
 
-    if (starredOnly){
-      filtered = filtered.filter(e => !!e.starred);
-    }
-    if (todayOnly){
-      filtered = filtered.filter(e => fmtDate(new Date(e.ts)) === t);
-    }
+    if (starredOnly) filtered = filtered.filter(e => !!e.starred);
+    if (todayOnly) filtered = filtered.filter(e => fmtDate(new Date(e.ts)) === t);
 
     if (!filtered.length){
       let msg = "No entries match the current filters.";
@@ -941,15 +928,9 @@
               <div class="ts">${escapeHtml(fmtTime(d))}</div>
               <div class="msg">${escapeHtml(e.msg)}</div>
               <div class="actions">
-                <button class="iconbtn star ${starOn}" data-action="star" title="Star" aria-label="Star">
-                  ${iconStar()}
-                </button>
-                <button class="iconbtn" data-action="edit" title="Edit" aria-label="Edit">
-                  ${iconPencil()}
-                </button>
-                <button class="iconbtn danger" data-action="delete" title="Delete" aria-label="Delete">
-                  ${iconTrash()}
-                </button>
+                <button class="iconbtn star ${starOn}" data-action="star" title="Star" aria-label="Star">${iconStar()}</button>
+                <button class="iconbtn" data-action="edit" title="Edit" aria-label="Edit">${iconPencil()}</button>
+                <button class="iconbtn danger" data-action="delete" title="Delete" aria-label="Delete">${iconTrash()}</button>
               </div>
             </div>
           `;
@@ -960,12 +941,8 @@
               <div class="msg">
                 <textarea class="editbox" data-role="editbox">${escapeHtml(e.msg)}</textarea>
                 <div class="editrow">
-                  <button class="iconbtn ok" data-action="save" title="Save" aria-label="Save">
-                    ${iconCheck()}
-                  </button>
-                  <button class="iconbtn" data-action="cancel" title="Cancel" aria-label="Cancel">
-                    ${iconX()}
-                  </button>
+                  <button class="iconbtn ok" data-action="save" title="Save" aria-label="Save">${iconCheck()}</button>
+                  <button class="iconbtn" data-action="cancel" title="Cancel" aria-label="Cancel">${iconX()}</button>
                 </div>
               </div>
               <div class="actions"></div>
@@ -1041,7 +1018,7 @@
     return imported;
   }
 
-  // ---------- Command mode (STICKY) ----------
+  // ---------- Command mode (sticky) ----------
   function setCmdMode(on){
     cmdMode = on;
     cmdBadge.classList.toggle("on", on);
@@ -1050,11 +1027,11 @@
   function handleCommandKey(key){
     const k = (key || "").toLowerCase();
 
-    // Panels
+    // Panels (only in CMD)
     if (k === "h"){ toggleHelp(); return true; }
     if (k === "o"){ toggleMenu(); return true; }
 
-    // Filters
+    // Filters (CMD)
     if (k === "t"){
       todayOnly = !todayOnly;
       todayOnlyEl.checked = todayOnly;
@@ -1070,7 +1047,7 @@
       return true;
     }
 
-    // BuJo (only if textarea active)
+    // BuJo (CMD) - only when a textarea is active
     if (BUJO.cmd[k]){
       const ta = getActiveTextArea();
       if (!ta) return false;
@@ -1114,7 +1091,7 @@
 
     items = items.concat(imported);
 
-    // de-dup (ts+msg) keep starred if either
+    // De-dup by (ts + msg). Preserve starred if either is starred.
     const map = new Map();
     for (const e of items){
       const k = e.ts + "|" + e.msg;
@@ -1151,7 +1128,7 @@
     render();
   });
 
-  // List actions (buttons)
+  // List actions
   logEl.addEventListener("click", (e) => {
     const btn = e.target.closest("button[data-action]");
     if (!btn) return;
@@ -1266,13 +1243,48 @@
       e.preventDefault();
       const handled = handleCommandKey(e.key);
 
-      // Sticky behavior requested:
-      // - valid command => exit cmd mode
-      // - invalid key => stay in cmd mode
+      // Sticky: valid command exits, invalid key stays in CMD
       if (handled) setCmdMode(false);
       return;
     }
   });
+
+  // ---------- Panel helpers (need to exist before command uses them) ----------
+  function openOverlay(){ overlay.classList.add("open"); overlay.setAttribute("aria-hidden","false"); }
+  function closeOverlay(){ overlay.classList.remove("open"); overlay.setAttribute("aria-hidden","true"); }
+  function anyPanelOpen(){ return menuPanel.classList.contains("open") || helpPanel.classList.contains("open"); }
+
+  function openMenu(){
+    helpPanel.classList.remove("open");
+    menuPanel.classList.add("open");
+    openOverlay();
+  }
+  function closeMenu(){
+    menuPanel.classList.remove("open");
+    if (!anyPanelOpen()) closeOverlay();
+  }
+  function toggleMenu(){
+    if (menuPanel.classList.contains("open")) closeMenu(); else openMenu();
+  }
+
+  function openHelp(){
+    menuPanel.classList.remove("open");
+    helpPanel.classList.add("open");
+    openOverlay();
+  }
+  function closeHelp(){
+    helpPanel.classList.remove("open");
+    if (!anyPanelOpen()) closeOverlay();
+  }
+  function toggleHelp(){
+    if (helpPanel.classList.contains("open")) closeHelp(); else openHelp();
+  }
+
+  overlay.addEventListener("click", () => { closeMenu(); closeHelp(); });
+  menuBtn.addEventListener("click", toggleMenu);
+  menuClose.addEventListener("click", closeMenu);
+  helpBtn.addEventListener("click", toggleHelp);
+  helpClose.addEventListener("click", closeHelp);
 
   // ---------- Init ----------
   loadUI();
