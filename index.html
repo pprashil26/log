@@ -6,7 +6,7 @@
   <title>Action Log</title>
   <style>
     :root{
-      /* Default theme = LIGHT (as requested) */
+      /* Default theme = LIGHT */
       --bg:#f7f9fc;
       --text:#0b1220;
       --muted:#51657f;
@@ -384,7 +384,7 @@
 
     /* Display-only tone rules (not editor) */
     .tone-event { color: var(--accent); }      /* blue */
-    .tone-priority { color: var(--danger); }   /* red */
+    .tone-priority { color: var(--danger); font-weight:800; }   /* red + bold (requested) */
 
     .sig { opacity:.95; }
     .sig-ph { color: var(--muted); opacity:.65; }
@@ -471,7 +471,9 @@
     <div class="panelHead">
       <div class="panelTitle">Menu</div>
       <button class="closeBtn" id="menuClose" aria-label="Close menu">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18"></path><path d="M6 6l12 12"></path></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M18 6L6 18"></path><path d="M6 6l12 12"></path>
+        </svg>
       </button>
     </div>
 
@@ -523,7 +525,9 @@
     <div class="panelHead">
       <div class="panelTitle">Help</div>
       <button class="closeBtn" id="helpClose" aria-label="Close help">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18"></path><path d="M6 6l12 12"></path></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M18 6L6 18"></path><path d="M6 6l12 12"></path>
+        </svg>
       </button>
     </div>
 
@@ -538,7 +542,7 @@
         <div class="sectionTitle">Prefix</div>
         <div class="muted">Format: <span class="kbd">·</span><span class="kbd">␠</span><span class="kbd">•</span><span class="kbd">␠</span>text</div>
         <div class="muted" style="margin-top:6px;">Signifiers: <span class="kbd">!</span> priority · <span class="kbd">?</span> explore</div>
-        <div class="muted" style="margin-top:6px;">Display rule: <span class="kbd">○</span> event = blue; <span class="kbd">!</span> (non-event) = red</div>
+        <div class="muted" style="margin-top:6px;">Display: <span class="kbd">○</span> event = blue; <span class="kbd">!</span> (non-event) = red + bold</div>
       </div>
 
       <div class="section">
@@ -574,8 +578,8 @@
 
 <script>
 (() => {
-  const KEY = "actionLog.v15";
-  const OLD_KEYS = ["actionLog.v14","actionLog.v13","actionLog.v12","actionLog.v11","actionLog.v10","actionLog.v9","actionLog.v8","actionLog.v7","actionLog.v6","actionLog.v5","actionLog.v4","actionLog.v3","actionLog.v2","actionLog.v1"];
+  const KEY = "actionLog.v16";
+  const OLD_KEYS = ["actionLog.v15","actionLog.v14","actionLog.v13","actionLog.v12","actionLog.v11","actionLog.v10","actionLog.v9","actionLog.v8","actionLog.v7","actionLog.v6","actionLog.v5","actionLog.v4","actionLog.v3","actionLog.v2","actionLog.v1"];
 
   const UI_TODAY_ONLY   = "actionLog.ui.todayOnly";
   const UI_STARRED_ONLY = "actionLog.ui.starredOnly";
@@ -597,7 +601,6 @@
     return out;
   }
 
-  // CMD mappings (bullets + signifiers)
   const CMD_MAP = {
     a: { kind:"bullet", value:"•" },
     n: { kind:"bullet", value:"–" },
@@ -637,7 +640,6 @@
   const file = $("file");
   const todayOnlyEl = $("todayOnly");
   const starredOnlyEl = $("starredOnly");
-
   const lightModeToggle = $("lightModeToggle");
 
   let items = [];
@@ -646,17 +648,15 @@
   let starredOnly = false;
   let cmdMode = false;
 
-  // ---- Theme (Option B): Light toggle, default LIGHT ----
+  // ----- Theme toggle (Light default) -----
   function applyLightMode(isLight){
-    // Light is default (no attribute). Dark uses data-theme="dark".
     document.documentElement.dataset.theme = isLight ? "" : "dark";
   }
   function loadLightMode(){
-    // default ON (light)
     try{
       const v = localStorage.getItem(UI_LIGHT_MODE);
       if (v === "0") return false;
-      return true;
+      return true; // default ON
     } catch(e){
       return true;
     }
@@ -681,19 +681,12 @@
     }[c]));
   }
 
-  // Prefix parsing: [sign][space][bullet][space]rest
   function parsePrefix(line){
     if (line.length < 4) return { has:false, sig:null, bullet:null, rest:line };
-
-    const s = line[0];
-    const sp = line[1];
-    const b = line[2];
-    const sp2 = line[3];
-
+    const s = line[0], sp = line[1], b = line[2], sp2 = line[3];
     if (sp !== " " || sp2 !== " ") return { has:false, sig:null, bullet:null, rest:line };
     if (!(s === SIG_PLACEHOLDER || SIGS.has(s))) return { has:false, sig:null, bullet:null, rest:line };
     if (!BULLETS.has(b)) return { has:false, sig:null, bullet:null, rest:line };
-
     const rest = stripLeadingPrefixes(line.slice(4));
     return { has:true, sig: SIGS.has(s) ? s : null, bullet:b, rest };
   }
@@ -706,21 +699,16 @@
 
   function ensurePrefixLine(rawLine){
     const raw = (rawLine ?? "").toString();
-
     const p = parsePrefix(raw);
     if (p.has) return buildPrefix(p.sig, p.bullet) + p.rest;
 
     const first = raw[0] || "";
     const second = raw[1] || "";
 
-    // legacy: bullet prefix "• text"
     if (BULLETS.has(first) && second === " "){
       return buildPrefix(null, first) + raw.slice(2);
     }
-
-    // legacy: old priority "!! "
     if (raw.startsWith("!! ")){
-      // "!! • " old
       if (BULLETS.has(raw[3] || "") && (raw[4] || "") === " "){
         const bullet = raw[3];
         const rest = raw.slice(5);
@@ -728,8 +716,6 @@
       }
       return buildPrefix(SIG_PRIORITY, DEFAULT_BULLET) + raw.slice(3);
     }
-
-    // legacy: idea "💡 " removed previously
     if (raw.startsWith("💡 ")){
       if (BULLETS.has(raw[3] || "") && (raw[4] || "") === " "){
         const bullet = raw[3];
@@ -738,8 +724,6 @@
       }
       return buildPrefix(null, DEFAULT_BULLET) + raw.slice(3);
     }
-
-    // legacy: old 1-char signifier + bullet "* •", "! •", "? •", "· •"
     if ((first === "*" || first === "!" || first === "?" || first === "·") && second === " " && BULLETS.has(raw[2] || "") && (raw[3] || "") === " "){
       const bullet = raw[2];
       const rest = raw.slice(4);
@@ -799,9 +783,6 @@
     return true;
   }
 
-  // Display-only formatting with tone rules:
-  // - Event bullet ○ => blue
-  // - Priority sign ! (non-event) => red
   function formatMsgForDisplay(msg){
     const safe = escapeHtml(msg);
     if (safe.length < 4) return safe;
@@ -809,18 +790,15 @@
     const sig = safe[0];
     const bullet = safe[2];
 
+    // precedence: event blue always
     let toneClass = "";
     if (bullet === "○") toneClass = "tone-event";
     else if (sig === "!") toneClass = "tone-priority";
 
-    let signHtml = safe.slice(0,1);
-    if (sig === "·") {
-      signHtml = `<span class="sig sig-ph">·</span>`;
-    } else if (sig === "!" && bullet !== "○") {
-      signHtml = `<span class="sig sig-pri">!</span>`;
-    } else {
-      signHtml = `<span class="sig">${safe.slice(0,1)}</span>`;
-    }
+    let signHtml;
+    if (sig === "·") signHtml = `<span class="sig sig-ph">·</span>`;
+    else if (sig === "!" && bullet !== "○") signHtml = `<span class="sig sig-pri">!</span>`;
+    else signHtml = `<span class="sig">${safe.slice(0,1)}</span>`;
 
     const rebuilt = signHtml + safe.slice(1);
     return toneClass ? `<span class="${toneClass}">${rebuilt}</span>` : rebuilt;
@@ -836,7 +814,6 @@
     todayOnlyEl.checked = todayOnly;
     starredOnlyEl.checked = starredOnly;
   }
-
   function saveUI(){
     localStorage.setItem(UI_TODAY_ONLY, todayOnly ? "1" : "0");
     localStorage.setItem(UI_STARRED_ONLY, starredOnly ? "1" : "0");
@@ -871,7 +848,6 @@
     }
     saveData();
   }
-
   function saveData(){
     localStorage.setItem(KEY, JSON.stringify(items));
   }
@@ -927,6 +903,7 @@
     return out;
   }
 
+  // Panels
   function openOverlay(){ overlay.classList.add("open"); overlay.setAttribute("aria-hidden","false"); }
   function closeOverlay(){ overlay.classList.remove("open"); overlay.setAttribute("aria-hidden","true"); }
   function anyPanelOpen(){ return menuPanel.classList.contains("open") || helpPanel.classList.contains("open"); }
@@ -939,6 +916,7 @@
   function closeHelp(){ helpPanel.classList.remove("open"); if (!anyPanelOpen()) closeOverlay(); }
   function toggleHelp(){ if (helpPanel.classList.contains("open")) closeHelp(); else openHelp(); }
 
+  // CMD
   function setCmdMode(on){
     cmdMode = on;
     cmdBadge.classList.toggle("on", on);
@@ -979,45 +957,25 @@
 
   // Icons
   function iconStar(){
-    return `<svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 17.3l-6.18 3.64 1.64-7.03L2 9.24l7.19-.61L12 2l2.81 6.63 7.19.61-5.46 4.67 1.64 7.03z"></path>
-    </svg>`;
+    return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 17.3l-6.18 3.64 1.64-7.03L2 9.24l7.19-.61L12 2l2.81 6.63 7.19.61-5.46 4.67 1.64 7.03z"></path></svg>`;
   }
   function iconPencil(){
-    return `<svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 20h9"></path>
-      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
-    </svg>`;
+    return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path></svg>`;
   }
   function iconTrash(){
-    return `<svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M3 6h18"></path>
-      <path d="M8 6V4h8v2"></path>
-      <path d="M19 6l-1 14H6L5 6"></path>
-      <path d="M10 11v6"></path>
-      <path d="M14 11v6"></path>
-    </svg>`;
+    return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>`;
   }
   function iconCheck(){
-    return `<svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M20 6L9 17l-5-5"></path>
-    </svg>`;
+    return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg>`;
   }
   function iconX(){
-    return `<svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M18 6L6 18"></path>
-      <path d="M6 6l12 12"></path>
-    </svg>`;
+    return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18"></path><path d="M6 6l12 12"></path></svg>`;
   }
   function iconChevronDown(){
-    return `<svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M6 9l6 6 6-6"></path>
-    </svg>`;
+    return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>`;
   }
   function iconChevronUp(){
-    return `<svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M18 15l-6-6-6 6"></path>
-    </svg>`;
+    return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 15l-6-6-6 6"></path></svg>`;
   }
 
   function render(){
@@ -1076,9 +1034,15 @@
                   ${iconChevronDown()}
                 </button>
                 <div class="actions">
-                  <button class="iconbtn star ${starOn}" data-action="star" title="Star" aria-label="Star">${iconStar()}</button>
-                  <button class="iconbtn" data-action="edit" title="Edit" aria-label="Edit">${iconPencil()}</button>
-                  <button class="iconbtn danger" data-action="delete" title="Delete" aria-label="Delete">${iconTrash()}</button>
+                  <button class="iconbtn star ${starOn}" data-action="star" title="Star" aria-label="Star">
+                    ${iconStar()}
+                  </button>
+                  <button class="iconbtn" data-action="edit" title="Edit" aria-label="Edit">
+                    ${iconPencil()}
+                  </button>
+                  <button class="iconbtn danger" data-action="delete" title="Delete" aria-label="Delete">
+                    ${iconTrash()}
+                  </button>
                 </div>
               </div>
             </div>
@@ -1104,7 +1068,6 @@
 
     logEl.innerHTML = html;
 
-    // show chevrons only when collapsed text is truncated
     requestAnimationFrame(() => {
       const rows = logEl.querySelectorAll(".entry");
       rows.forEach(row => {
@@ -1153,7 +1116,6 @@
         else if (msg.startsWith("★")){ starred = true; msg = msg.slice(1).trimStart(); }
 
         msg = ensurePrefixOnFirstLine(msg);
-
         if (!Number.isNaN(ts) && msg){
           imported.push({ id: uid(ts), ts, msg, starred });
         }
@@ -1165,7 +1127,6 @@
         else if (msg.startsWith("★")){ starred = true; msg = msg.slice(1).trimStart(); }
 
         msg = ensurePrefixOnFirstLine(msg);
-
         if (msg){
           const ts = now + (offset++);
           imported.push({ id: uid(ts), ts, msg, starred });
@@ -1175,13 +1136,44 @@
     return imported;
   }
 
-  // --- UI events ---
+  // --------- Event wiring ----------
+  // Menu/Help open/close
+  menuBtn.addEventListener("click", toggleMenu);
+  menuClose.addEventListener("click", closeMenu);
+  helpBtn.addEventListener("click", toggleHelp);
+  helpClose.addEventListener("click", closeHelp);
+  overlay.addEventListener("click", () => { closeMenu(); closeHelp(); });
+
+  // Theme
+  const initialLight = loadLightMode();
+  applyLightMode(initialLight);
+  lightModeToggle.checked = initialLight;
+  lightModeToggle.addEventListener("change", () => {
+    const isLight = !!lightModeToggle.checked;
+    saveLightMode(isLight);
+    applyLightMode(isLight);
+  });
+
+  // Filters
+  todayOnlyEl.addEventListener("change", () => {
+    todayOnly = !!todayOnlyEl.checked;
+    saveUI();
+    render();
+  });
+  starredOnlyEl.addEventListener("change", () => {
+    starredOnly = !!starredOnlyEl.checked;
+    saveUI();
+    render();
+  });
+
+  // Add
   addBtn.addEventListener("click", () => {
     addEntry(input.value);
     input.value = "";
     input.focus();
   });
 
+  // CMD typing + Add on Enter
   input.addEventListener("keydown", (e) => {
     if (cmdMode){
       if (["Shift","Control","Alt","Meta"].includes(e.key)) return;
@@ -1196,9 +1188,9 @@
     }
   });
 
+  // Export/Import/Clear
   exportBtn.addEventListener("click", () => { exportTxt(); closeMenu(); });
   importBtn.addEventListener("click", () => file.click());
-
   file.addEventListener("change", async () => {
     const f = file.files && file.files[0];
     file.value = "";
@@ -1237,19 +1229,48 @@
     closeMenu();
   });
 
-  todayOnlyEl.addEventListener("change", () => {
-    todayOnly = !!todayOnlyEl.checked;
-    saveUI();
-    render();
+  // Mobile CMD button
+  cmdBtnMobile.addEventListener("click", () => {
+    setCmdMode(!cmdMode);
+    input.focus();
   });
 
-  starredOnlyEl.addEventListener("change", () => {
-    starredOnly = !!starredOnlyEl.checked;
-    saveUI();
-    render();
+  // Desktop CMD + panel ESC
+  document.addEventListener("keydown", (e) => {
+    const isMac = navigator.platform.toLowerCase().includes("mac");
+    const mod = isMac ? e.metaKey : e.ctrlKey;
+
+    if (e.key === "Escape"){
+      if (cmdMode){ e.preventDefault(); setCmdMode(false); return; }
+      if (anyPanelOpen()){
+        e.preventDefault();
+        closeMenu(); closeHelp();
+        return;
+      }
+    }
+
+    if (mod && e.key === "/"){
+      e.preventDefault();
+      input.focus();
+      return;
+    }
+
+    if (mod && e.key === ";"){
+      e.preventDefault();
+      setCmdMode(!cmdMode);
+      return;
+    }
+
+    if (cmdMode){
+      if (["Shift","Control","Alt","Meta"].includes(e.key)) return;
+      e.preventDefault();
+      const handled = handleCommandKey(e.key);
+      if (handled) setCmdMode(false);
+      return;
+    }
   });
 
-  // List actions
+  // Log actions (expand/star/edit/save/delete)
   logEl.addEventListener("click", (e) => {
     const btn = e.target.closest("button[data-action]");
     if (!btn) return;
@@ -1264,7 +1285,6 @@
     if (action === "toggleExpand"){
       const msgEl = row.querySelector('[data-role="msg"]');
       if (!msgEl) return;
-
       const isExpanded = msgEl.classList.contains("expanded");
       if (isExpanded){
         msgEl.classList.remove("expanded");
@@ -1301,76 +1321,7 @@
     }
   });
 
-  // Desktop CMD + focus
-  document.addEventListener("keydown", (e) => {
-    const isMac = navigator.platform.toLowerCase().includes("mac");
-    const mod = isMac ? e.metaKey : e.ctrlKey;
-
-    if (e.key === "Escape"){
-      if (cmdMode){ e.preventDefault(); setCmdMode(false); return; }
-      if (menuPanel.classList.contains("open") || helpPanel.classList.contains("open")){
-        e.preventDefault();
-        closeMenu(); closeHelp();
-        return;
-      }
-    }
-
-    if (mod && e.key === "/"){
-      e.preventDefault();
-      input.focus();
-      return;
-    }
-
-    if (mod && e.key === ";"){
-      e.preventDefault();
-      setCmdMode(!cmdMode);
-      return;
-    }
-
-    if (cmdMode){
-      if (["Shift","Control","Alt","Meta"].includes(e.key)) return;
-      e.preventDefault();
-      const handled = handleCommandKey(e.key);
-      if (handled) setCmdMode(false);
-      return;
-    }
-  });
-
-  // Mobile CMD button
-  if (cmdBtnMobile){
-    cmdBtnMobile.addEventListener("click", () => {
-      setCmdMode(!cmdMode);
-      input.focus();
-    });
-  }
-
-  // Theme toggle wiring (Light default)
-  function applyLightMode(isLight){
-    document.documentElement.dataset.theme = isLight ? "" : "dark";
-  }
-  function loadLightMode(){
-    try{
-      const v = localStorage.getItem(UI_LIGHT_MODE);
-      if (v === "0") return false;
-      return true;
-    } catch(e){ return true; }
-  }
-  function saveLightMode(isLight){
-    try{ localStorage.setItem(UI_LIGHT_MODE, isLight ? "1" : "0"); } catch(e){}
-  }
-
-  const initialLight = loadLightMode();
-  applyLightMode(initialLight);
-  if (lightModeToggle){
-    lightModeToggle.checked = initialLight;
-    lightModeToggle.addEventListener("change", () => {
-      const isLight = !!lightModeToggle.checked;
-      saveLightMode(isLight);
-      applyLightMode(isLight);
-    });
-  }
-
-  // Init
+  // ----- Init -----
   loadUI();
   loadData();
   setCmdMode(false);
