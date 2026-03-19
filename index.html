@@ -382,6 +382,10 @@
     .iconbtn.chev svg{stroke:var(--muted)}
     .iconbtn.chev.hidden{display:none}
 
+    /* Display-only tone rules (not editor) */
+    .tone-event { color: var(--accent); }      /* blue */
+    .tone-priority { color: var(--danger); }   /* red */
+
     .sig { opacity:.95; }
     .sig-ph { color: var(--muted); opacity:.65; }
     .sig-pri { color: var(--danger); font-weight:900; }
@@ -533,7 +537,8 @@
       <div class="section">
         <div class="sectionTitle">Prefix</div>
         <div class="muted">Format: <span class="kbd">·</span><span class="kbd">␠</span><span class="kbd">•</span><span class="kbd">␠</span>text</div>
-        <div class="muted" style="margin-top:6px;">Signifiers: <span class="kbd">!</span> priority (red) · <span class="kbd">?</span> explore</div>
+        <div class="muted" style="margin-top:6px;">Signifiers: <span class="kbd">!</span> priority · <span class="kbd">?</span> explore</div>
+        <div class="muted" style="margin-top:6px;">Display rule: <span class="kbd">○</span> event = blue; <span class="kbd">!</span> (non-event) = red</div>
       </div>
 
       <div class="section">
@@ -569,8 +574,8 @@
 
 <script>
 (() => {
-  const KEY = "actionLog.v14";
-  const OLD_KEYS = ["actionLog.v13","actionLog.v12","actionLog.v11","actionLog.v10","actionLog.v9","actionLog.v8","actionLog.v7","actionLog.v6","actionLog.v5","actionLog.v4","actionLog.v3","actionLog.v2","actionLog.v1"];
+  const KEY = "actionLog.v15";
+  const OLD_KEYS = ["actionLog.v14","actionLog.v13","actionLog.v12","actionLog.v11","actionLog.v10","actionLog.v9","actionLog.v8","actionLog.v7","actionLog.v6","actionLog.v5","actionLog.v4","actionLog.v3","actionLog.v2","actionLog.v1"];
 
   const UI_TODAY_ONLY   = "actionLog.ui.todayOnly";
   const UI_STARRED_ONLY = "actionLog.ui.starredOnly";
@@ -592,6 +597,7 @@
     return out;
   }
 
+  // CMD mappings (bullets + signifiers)
   const CMD_MAP = {
     a: { kind:"bullet", value:"•" },
     n: { kind:"bullet", value:"–" },
@@ -603,7 +609,7 @@
 
     p: { kind:"sig", value: SIG_PRIORITY },
     q: { kind:"sig", value: SIG_EXPLORE },
-    "?": { kind:"sig", value: SIG_EXPLORE },
+    "?": { kind:"sig", value: SIG_EXPLORE }
   };
 
   const $ = (id) => document.getElementById(id);
@@ -640,8 +646,6 @@
   let starredOnly = false;
   let cmdMode = false;
 
-  const expanded = new Set();
-
   // ---- Theme (Option B): Light toggle, default LIGHT ----
   function applyLightMode(isLight){
     // Light is default (no attribute). Dark uses data-theme="dark".
@@ -677,14 +681,7 @@
     }[c]));
   }
 
-  function formatMsgForDisplay(msg){
-    const safe = escapeHtml(msg);
-    const first = safe[0] || "";
-    if (first === SIG_PRIORITY) return `<span class="sig sig-pri">!</span>${safe.slice(1)}`;
-    if (first === SIG_PLACEHOLDER) return `<span class="sig sig-ph">·</span>${safe.slice(1)}`;
-    return safe;
-  }
-
+  // Prefix parsing: [sign][space][bullet][space]rest
   function parsePrefix(line){
     if (line.length < 4) return { has:false, sig:null, bullet:null, rest:line };
 
@@ -707,15 +704,8 @@
     return `${s} ${b} `;
   }
 
-  function ensurePrefixOnFirstLine(text){
-    const t = (text ?? "").toString();
-    const lines = t.split("\n");
-    lines[0] = ensurePrefixLine(lines[0]);
-    return lines.join("\n");
-  }
-
-  function ensurePrefixLine(line){
-    const raw = (line ?? "").toString();
+  function ensurePrefixLine(rawLine){
+    const raw = (rawLine ?? "").toString();
 
     const p = parsePrefix(raw);
     if (p.has) return buildPrefix(p.sig, p.bullet) + p.rest;
@@ -723,11 +713,14 @@
     const first = raw[0] || "";
     const second = raw[1] || "";
 
+    // legacy: bullet prefix "• text"
     if (BULLETS.has(first) && second === " "){
       return buildPrefix(null, first) + raw.slice(2);
     }
 
+    // legacy: old priority "!! "
     if (raw.startsWith("!! ")){
+      // "!! • " old
       if (BULLETS.has(raw[3] || "") && (raw[4] || "") === " "){
         const bullet = raw[3];
         const rest = raw.slice(5);
@@ -736,6 +729,7 @@
       return buildPrefix(SIG_PRIORITY, DEFAULT_BULLET) + raw.slice(3);
     }
 
+    // legacy: idea "💡 " removed previously
     if (raw.startsWith("💡 ")){
       if (BULLETS.has(raw[3] || "") && (raw[4] || "") === " "){
         const bullet = raw[3];
@@ -745,6 +739,7 @@
       return buildPrefix(null, DEFAULT_BULLET) + raw.slice(3);
     }
 
+    // legacy: old 1-char signifier + bullet "* •", "! •", "? •", "· •"
     if ((first === "*" || first === "!" || first === "?" || first === "·") && second === " " && BULLETS.has(raw[2] || "") && (raw[3] || "") === " "){
       const bullet = raw[2];
       const rest = raw.slice(4);
@@ -753,6 +748,13 @@
     }
 
     return buildPrefix(null, DEFAULT_BULLET) + raw;
+  }
+
+  function ensurePrefixOnFirstLine(text){
+    const t = (text ?? "").toString();
+    const lines = t.split("\n");
+    lines[0] = ensurePrefixLine(lines[0]);
+    return lines.join("\n");
   }
 
   function applyCmdToActive(kind, value){
@@ -795,6 +797,33 @@
     ta.selectionStart = ta.selectionEnd = newPos;
     ta.focus();
     return true;
+  }
+
+  // Display-only formatting with tone rules:
+  // - Event bullet ○ => blue
+  // - Priority sign ! (non-event) => red
+  function formatMsgForDisplay(msg){
+    const safe = escapeHtml(msg);
+    if (safe.length < 4) return safe;
+
+    const sig = safe[0];
+    const bullet = safe[2];
+
+    let toneClass = "";
+    if (bullet === "○") toneClass = "tone-event";
+    else if (sig === "!") toneClass = "tone-priority";
+
+    let signHtml = safe.slice(0,1);
+    if (sig === "·") {
+      signHtml = `<span class="sig sig-ph">·</span>`;
+    } else if (sig === "!" && bullet !== "○") {
+      signHtml = `<span class="sig sig-pri">!</span>`;
+    } else {
+      signHtml = `<span class="sig">${safe.slice(0,1)}</span>`;
+    }
+
+    const rebuilt = signHtml + safe.slice(1);
+    return toneClass ? `<span class="${toneClass}">${rebuilt}</span>` : rebuilt;
   }
 
   function loadUI(){
@@ -880,7 +909,6 @@
     if (idx === -1) return false;
     items.splice(idx, 1);
     saveData();
-    expanded.delete(id);
     return true;
   }
 
@@ -910,12 +938,6 @@
   function openHelp(){ menuPanel.classList.remove("open"); helpPanel.classList.add("open"); openOverlay(); }
   function closeHelp(){ helpPanel.classList.remove("open"); if (!anyPanelOpen()) closeOverlay(); }
   function toggleHelp(){ if (helpPanel.classList.contains("open")) closeHelp(); else openHelp(); }
-
-  overlay.addEventListener("click", () => { closeMenu(); closeHelp(); });
-  menuBtn.addEventListener("click", toggleMenu);
-  menuClose.addEventListener("click", closeMenu);
-  helpBtn.addEventListener("click", toggleHelp);
-  helpClose.addEventListener("click", closeHelp);
 
   function setCmdMode(on){
     cmdMode = on;
@@ -955,23 +977,50 @@
     return false;
   }
 
-  if (cmdBtnMobile){
-    cmdBtnMobile.addEventListener("click", () => {
-      setCmdMode(!cmdMode);
-      input.focus();
-    });
+  // Icons
+  function iconStar(){
+    return `<svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 17.3l-6.18 3.64 1.64-7.03L2 9.24l7.19-.61L12 2l2.81 6.63 7.19.61-5.46 4.67 1.64 7.03z"></path>
+    </svg>`;
+  }
+  function iconPencil(){
+    return `<svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 20h9"></path>
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+    </svg>`;
+  }
+  function iconTrash(){
+    return `<svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M3 6h18"></path>
+      <path d="M8 6V4h8v2"></path>
+      <path d="M19 6l-1 14H6L5 6"></path>
+      <path d="M10 11v6"></path>
+      <path d="M14 11v6"></path>
+    </svg>`;
+  }
+  function iconCheck(){
+    return `<svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M20 6L9 17l-5-5"></path>
+    </svg>`;
+  }
+  function iconX(){
+    return `<svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M18 6L6 18"></path>
+      <path d="M6 6l12 12"></path>
+    </svg>`;
+  }
+  function iconChevronDown(){
+    return `<svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M6 9l6 6 6-6"></path>
+    </svg>`;
+  }
+  function iconChevronUp(){
+    return `<svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M18 15l-6-6-6 6"></path>
+    </svg>`;
   }
 
-  function iconStar(){ return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 17.3l-6.18 3.64 1.64-7.03L2 9.24l7.19-.61L12 2l2.81 6.63 7.19.61-5.46 4.67 1.64 7.03z"></path></svg>`; }
-  function iconPencil(){ return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path></svg>`; }
-  function iconTrash(){ return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>`; }
-  function iconChevronDown(){ return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>`; }
-  function iconChevronUp(){ return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 15l-6-6-6 6"></path></svg>`; }
-  function iconCheck(){ return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg>`; }
-  function iconX(){ return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18"></path><path d="M6 6l12 12"></path></svg>`; }
-
   function render(){
-    expanded.clear();
     const total = items.length;
     const starredCount = items.reduce((a,x)=>a + (x.starred ? 1 : 0), 0);
     countEl.textContent = `${total} entr${total===1?"y":"ies"} · ${starredCount}★`;
@@ -1055,6 +1104,7 @@
 
     logEl.innerHTML = html;
 
+    // show chevrons only when collapsed text is truncated
     requestAnimationFrame(() => {
       const rows = logEl.querySelectorAll(".entry");
       rows.forEach(row => {
@@ -1125,7 +1175,7 @@
     return imported;
   }
 
-  // ---- Event wiring ----
+  // --- UI events ---
   addBtn.addEventListener("click", () => {
     addEntry(input.value);
     input.value = "";
@@ -1181,7 +1231,6 @@
     if (!ok) return;
     items = [];
     editingId = null;
-    expanded.clear();
     saveData();
     render();
     input.focus();
@@ -1200,6 +1249,7 @@
     render();
   });
 
+  // List actions
   logEl.addEventListener("click", (e) => {
     const btn = e.target.closest("button[data-action]");
     if (!btn) return;
@@ -1251,6 +1301,7 @@
     }
   });
 
+  // Desktop CMD + focus
   document.addEventListener("keydown", (e) => {
     const isMac = navigator.platform.toLowerCase().includes("mac");
     const mod = isMac ? e.metaKey : e.ctrlKey;
@@ -1285,7 +1336,29 @@
     }
   });
 
-  // ---- Theme toggle wiring (Light default) ----
+  // Mobile CMD button
+  if (cmdBtnMobile){
+    cmdBtnMobile.addEventListener("click", () => {
+      setCmdMode(!cmdMode);
+      input.focus();
+    });
+  }
+
+  // Theme toggle wiring (Light default)
+  function applyLightMode(isLight){
+    document.documentElement.dataset.theme = isLight ? "" : "dark";
+  }
+  function loadLightMode(){
+    try{
+      const v = localStorage.getItem(UI_LIGHT_MODE);
+      if (v === "0") return false;
+      return true;
+    } catch(e){ return true; }
+  }
+  function saveLightMode(isLight){
+    try{ localStorage.setItem(UI_LIGHT_MODE, isLight ? "1" : "0"); } catch(e){}
+  }
+
   const initialLight = loadLightMode();
   applyLightMode(initialLight);
   if (lightModeToggle){
@@ -1297,7 +1370,7 @@
     });
   }
 
-  // ---- Init ----
+  // Init
   loadUI();
   loadData();
   setCmdMode(false);
