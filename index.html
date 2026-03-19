@@ -366,7 +366,7 @@
     /* Minimal signifier emphasis */
     .sig { opacity:.95; }
     .sig-ph { color: var(--muted); opacity:.65; }
-    .sig-pri { color: var(--danger); font-weight:900; } /* !! in red */
+    .sig-pri { color: var(--danger); font-weight:900; } /* ! in red */
 
     .editbox{
       width:100%;
@@ -507,8 +507,8 @@
 
       <div class="section">
         <div class="sectionTitle">Prefix (always present)</div>
-        <div class="muted">Prefix is a fixed sign slot + bullet: <span class="kbd">·␠</span><span class="kbd">␠</span><span class="kbd">•</span><span class="kbd">␠</span>text</div>
-        <div class="muted" style="margin-top:6px;">Sign slot values: <span class="kbd">!!</span> priority · <span class="kbd">💡</span> idea · <span class="kbd">?</span> explore</div>
+        <div class="muted">Every entry starts as: <span class="kbd">·</span><span class="kbd">␠</span><span class="kbd">•</span><span class="kbd">␠</span>text</div>
+        <div class="muted" style="margin-top:6px;">Signifiers: <span class="kbd">!</span> priority (red) · <span class="kbd">?</span> explore</div>
       </div>
 
       <div class="section">
@@ -521,9 +521,8 @@
 
       <div class="section">
         <div class="sectionTitle">Signifier (max 1; CMD)</div>
-        <div class="rowLine"><div class="keys"><span class="kbd">p</span></div><div class="desc">!! (priority)</div></div>
-        <div class="rowLine"><div class="keys"><span class="kbd">i</span> / <span class="kbd">!</span></div><div class="desc">💡 (idea)</div></div>
-        <div class="rowLine"><div class="keys"><span class="kbd">q</span> / <span class="kbd">?</span></div><div class="desc">? (explore)</div></div>
+        <div class="rowLine"><div class="keys"><span class="kbd">p</span></div><div class="desc">! priority</div></div>
+        <div class="rowLine"><div class="keys"><span class="kbd">q</span> / <span class="kbd">?</span></div><div class="desc">? explore</div></div>
       </div>
 
       <div class="section">
@@ -547,34 +546,31 @@
 
 <script>
 (() => {
-  const KEY = "actionLog.v9";
-  const OLD_KEYS = ["actionLog.v8","actionLog.v7","actionLog.v6","actionLog.v5","actionLog.v4","actionLog.v3","actionLog.v2","actionLog.v1"];
+  const KEY = "actionLog.v10";
+  const OLD_KEYS = ["actionLog.v9","actionLog.v8","actionLog.v7","actionLog.v6","actionLog.v5","actionLog.v4","actionLog.v3","actionLog.v2","actionLog.v1"];
   const UI_TODAY_ONLY   = "actionLog.ui.todayOnly";
   const UI_STARRED_ONLY = "actionLog.ui.starredOnly";
+
+  const SIG_PLACEHOLDER = "·";               // placeholder
+  const SIG_PRIORITY = "!";                  // priority (red)
+  const SIG_EXPLORE = "?";                   // explore
+  const SIGS = new Set([SIG_PRIORITY, SIG_EXPLORE]);
 
   const DEFAULT_BULLET = "•";
   const BULLETS = new Set(["•","–","○","~"]);
 
-  // --- Signifier slot is ALWAYS 2 chars ---
-  const SIG_PLACEHOLDER2 = "· "; // dot + space
-  const SIG_PRIORITY2    = "!!"; // two chars
-  const SIG_IDEA2        = "💡 "; // bulb + space (2 chars)
-  const SIG_EXPLORE2     = "? ";  // question + space (2 chars)
-
-  const SIG_SLOTS2 = new Set([SIG_PLACEHOLDER2, SIG_PRIORITY2, SIG_IDEA2, SIG_EXPLORE2]);
-
-  // CMD mappings (values are logical signifier tokens; we store priority as "!!", idea as "💡 ", explore as "? ")
+  // CMD mappings (idea removed)
   const CMD_MAP = {
+    // bullets
     a: { kind:"bullet", value:"•" },
     n: { kind:"bullet", value:"–" },
     e: { kind:"bullet", value:"○" },
     m: { kind:"bullet", value:"~" },
 
-    p: { kind:"sig", value: SIG_PRIORITY2 },  // !!
-    i: { kind:"sig", value: SIG_IDEA2 },      // 💡
-    "!": { kind:"sig", value: SIG_IDEA2 },    // allow ! key too
-    q: { kind:"sig", value: SIG_EXPLORE2 },   // ?
-    "?": { kind:"sig", value: SIG_EXPLORE2 }  // allow ? key too
+    // signifier
+    p: { kind:"sig", value: SIG_PRIORITY },
+    q: { kind:"sig", value: SIG_EXPLORE },
+    "?": { kind:"sig", value: SIG_EXPLORE }
   };
 
   const $ = (id) => document.getElementById(id);
@@ -626,66 +622,52 @@
     return String(ts) + "-" + Math.random().toString(36).slice(2,6);
   }
 
-  // Fixed escaping
   function escapeHtml(s){
     return s.replace(/[&<>"']/g, c => ({
       "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
     }[c]));
   }
 
-  // Display-only formatter: color priority "!!" red, keep others subtle
+  // Display-only formatter: color priority "!" red
   function formatMsgForDisplay(msg){
     const safe = escapeHtml(msg);
+    const first = safe[0] || "";
 
-    // If it matches new 2-char slot prefix, decorate only the 2-char sign slot
-    const sig2 = safe.slice(0,2);
-
-    if (sig2 === "!!"){
-      return `<span class="sig sig-pri">!!</span>${safe.slice(2)}`;
+    if (first === SIG_PRIORITY){
+      return `<span class="sig sig-pri">!</span>${safe.slice(1)}`;
     }
-    if (safe.slice(0,2) === "💡 "){
-      return `<span class="sig">💡 </span>${safe.slice(2)}`;
+    if (first === SIG_PLACEHOLDER){
+      return `<span class="sig sig-ph">·</span>${safe.slice(1)}`;
     }
-    if (safe.slice(0,2) === "? "){
-      return `<span class="sig">? </span>${safe.slice(2)}`;
-    }
-    if (safe.slice(0,2) === "· "){
-      return `<span class="sig sig-ph">· </span>${safe.slice(2)}`;
-    }
-
+    // explore "?" and others remain normal
     return safe;
   }
 
-  // -------- Prefix rules (always: [2-char sign slot][space][bullet][space]) --------
+  // -------- Prefix rules (always: [sigOrPlaceholder][space][bullet][space]) --------
   function parsePrefix(line){
-    // Format: [sig2][space][bullet][space]rest
-    // Example: "!! • text", "💡  • text", "?  • text", "·  • text"
-    if (line.length < 5) return { has:false, sig:null, bullet:null, rest:line };
+    if (line.length < 4) return { has:false, sig:null, bullet:null, rest:line };
 
-    const sig2 = line.slice(0,2);
-    const sp1 = line[2];
-    const b = line[3];
-    const sp2 = line[4];
+    const s = line[0];
+    const sp = line[1];
+    const b = line[2];
+    const sp2 = line[3];
 
-    if (!SIG_SLOTS2.has(sig2) || sp1 !== " " || sp2 !== " " || !BULLETS.has(b)){
-      return { has:false, sig:null, bullet:null, rest:line };
-    }
-
-    // normalize: placeholder => null, otherwise keep exact 2-char token
-    const sig = (sig2 === SIG_PLACEHOLDER2) ? null : sig2;
+    if (sp !== " " || sp2 !== " ") return { has:false, sig:null, bullet:null, rest:line };
+    if (!(s === SIG_PLACEHOLDER || SIGS.has(s))) return { has:false, sig:null, bullet:null, rest:line };
+    if (!BULLETS.has(b)) return { has:false, sig:null, bullet:null, rest:line };
 
     return {
       has:true,
-      sig,
+      sig: SIGS.has(s) ? s : null,
       bullet: b,
-      rest: line.slice(5)
+      rest: line.slice(4)
     };
   }
 
-  function buildPrefix(sig2, bullet){
-    const s2 = sig2 ? sig2 : SIG_PLACEHOLDER2; // always 2 chars
+  function buildPrefix(sig, bullet){
+    const s = sig ? sig : SIG_PLACEHOLDER;
     const b = bullet ? bullet : DEFAULT_BULLET;
-    return `${s2} ${b} `;
+    return `${s} ${b} `;
   }
 
   function ensurePrefixOnFirstLine(text){
@@ -698,44 +680,50 @@
   function ensurePrefixLine(line){
     const raw = (line ?? "").toString();
 
-    // Already in new format
+    // Already correct
     const p = parsePrefix(raw);
     if (p.has) return raw;
 
     const first = raw[0] || "";
     const second = raw[1] || "";
 
-    // Legacy: old bullet form "• text"
+    // Legacy: bullet prefix "• text"
     if (BULLETS.has(first) && second === " "){
       return buildPrefix(null, first) + raw.slice(2);
     }
 
-    // Legacy: old 1-char signifier + bullet: "* • text" / "! • text" / "? • text" / "· • text"
-    // Pattern: [sigChar][space][bullet][space]rest
-    const sigChar = first;
-    const hasOldSig = (sigChar === "*" || sigChar === "!" || sigChar === "?" || sigChar === "·");
-    if (hasOldSig && second === " " && BULLETS.has(raw[2] || "") && (raw[3] || "") === " "){
-      const oldBullet = raw[2];
+    // Legacy: old 2-char priority "!!" -> convert to "!"
+    if (raw.startsWith("!! ")){
+      // "!! • " old
+      if (BULLETS.has(raw[3] || "") && (raw[4] || "") === " "){
+        const bullet = raw[3];
+        const rest = raw.slice(5);
+        return buildPrefix(SIG_PRIORITY, bullet) + rest;
+      }
+      // "!! something"
+      return buildPrefix(SIG_PRIORITY, DEFAULT_BULLET) + raw.slice(3);
+    }
+
+    // Legacy: old idea signifier "💡 " -> remove (placeholder) OR keep bullet if present
+    if (raw.startsWith("💡 ")){
+      if (BULLETS.has(raw[3] || "") && (raw[4] || "") === " "){
+        const bullet = raw[3];
+        const rest = raw.slice(5);
+        return buildPrefix(null, bullet) + rest;
+      }
+      return buildPrefix(null, DEFAULT_BULLET) + raw.slice(3);
+    }
+
+    // Legacy: old 1-char signifier + bullet: "* •", "! •", "? •"
+    if ((first === "*" || first === "!" || first === "?" || first === "·") && second === " " && BULLETS.has(raw[2] || "") && (raw[3] || "") === " "){
+      const bullet = raw[2];
       const rest = raw.slice(4);
-      let sig2 = null;
-      if (sigChar === "*") sig2 = SIG_PRIORITY2;
-      else if (sigChar === "!") sig2 = SIG_IDEA2;
-      else if (sigChar === "?") sig2 = SIG_EXPLORE2;
-      else sig2 = null;
-      return buildPrefix(sig2, oldBullet) + rest;
+      // map "*" -> "!" now
+      const sig = (first === "*" || first === "!") ? SIG_PRIORITY : (first === "?" ? SIG_EXPLORE : null);
+      return buildPrefix(sig, bullet) + rest;
     }
 
-    // Legacy: old signifier without bullet "* text" / "! text" / "? text"
-    if ((sigChar === "*" || sigChar === "!" || sigChar === "?") && second === " "){
-      const rest = raw.slice(2);
-      let sig2 = null;
-      if (sigChar === "*") sig2 = SIG_PRIORITY2;
-      else if (sigChar === "!") sig2 = SIG_IDEA2;
-      else if (sigChar === "?") sig2 = SIG_EXPLORE2;
-      return buildPrefix(sig2, DEFAULT_BULLET) + rest;
-    }
-
-    // Default: add placeholder + default bullet
+    // Default
     return buildPrefix(null, DEFAULT_BULLET) + raw;
   }
 
@@ -754,23 +742,21 @@
     const ensured = ensurePrefixLine(line);
     const parsed = parsePrefix(ensured);
 
-    let sig2 = parsed.sig;                   // null or one of: "!!", "💡 ", "? "
+    let sig = parsed.sig;                   // null or '!' or '?'
     let bullet = parsed.bullet || DEFAULT_BULLET;
 
     if (kind === "bullet"){
       bullet = value;
     } else if (kind === "sig"){
-      // single signifier: toggle if same, else replace
-      sig2 = (sig2 === value) ? null : value;
+      sig = (sig === value) ? null : value; // toggle/replace
     }
 
-    const newLine = buildPrefix(sig2, bullet) + parsed.rest;
+    const newLine = buildPrefix(sig, bullet) + parsed.rest;
     const newText = text.slice(0, ls) + newLine + text.slice(le);
 
-    // cursor: if inside prefix region, jump to end of prefix
     const offset = pos - ls;
-    const oldPrefixLen = parsePrefix(ensured).has ? 5 : 0;
-    const newPrefixLen = 5;
+    const oldPrefixLen = parsePrefix(ensured).has ? 4 : 0;
+    const newPrefixLen = 4;
 
     let newPos;
     if (offset <= oldPrefixLen) newPos = ls + newPrefixLen;
@@ -967,7 +953,7 @@
     return false;
   }
 
-  // Only ONE mobile CMD button listener
+  // Mobile CMD button listener (single)
   if (cmdBtnMobile){
     cmdBtnMobile.addEventListener("click", () => {
       setCmdMode(!cmdMode);
@@ -1319,36 +1305,6 @@
     }
   });
 
-  // Edit keyboard (hardware keyboards)
-  logEl.addEventListener("keydown", (e) => {
-    const box = e.target.closest('[data-role="editbox"]');
-    if (!box) return;
-
-    const isMac = navigator.platform.toLowerCase().includes("mac");
-    const mod = isMac ? e.metaKey : e.ctrlKey;
-
-    if (mod && e.key === "Enter"){
-      e.preventDefault();
-      const row = box.closest(".entry");
-      const id = row && row.getAttribute("data-id");
-      if (!id) return;
-
-      const ok = updateEntry(id, box.value);
-      if (!ok){
-        alert("Entry cannot be empty.");
-        return;
-      }
-      editingId = null;
-      render();
-    }
-
-    if (e.key === "Escape"){
-      e.preventDefault();
-      editingId = null;
-      render();
-    }
-  });
-
   // Desktop CMD shortcuts
   document.addEventListener("keydown", (e) => {
     const isMac = navigator.platform.toLowerCase().includes("mac");
@@ -1384,6 +1340,14 @@
     }
   });
 
+  // Mobile CMD button listener (single)
+  if (cmdBtnMobile){
+    cmdBtnMobile.addEventListener("click", () => {
+      setCmdMode(!cmdMode);
+      input.focus();
+    });
+  }
+
   // Panel helper wrappers
   function closeMenu(){
     menuPanel.classList.remove("open");
@@ -1397,7 +1361,30 @@
     return menuPanel.classList.contains("open") || helpPanel.classList.contains("open");
   }
 
-  // -------- Init --------
+  // Export/import/filters/clear in menu
+  // (already wired)
+
+  // Toggle panels
+  menuBtn.addEventListener("click", toggleMenu);
+  menuClose.addEventListener("click", closeMenu);
+  helpBtn.addEventListener("click", toggleHelp);
+  helpClose.addEventListener("click", closeHelp);
+  overlay.addEventListener("click", () => { closeMenu(); closeHelp(); });
+
+  function openMenu(){ helpPanel.classList.remove("open"); menuPanel.classList.add("open"); openOverlay(); }
+  function toggleMenu(){ if (menuPanel.classList.contains("open")) closeMenu(); else openMenu(); }
+  function openHelp(){ menuPanel.classList.remove("open"); helpPanel.classList.add("open"); openOverlay(); }
+  function toggleHelp(){ if (helpPanel.classList.contains("open")) closeHelp(); else openHelp(); }
+
+  // overlay helpers
+  function openOverlay(){ overlay.classList.add("open"); overlay.setAttribute("aria-hidden","false"); }
+  function closeOverlay(){ overlay.classList.remove("open"); overlay.setAttribute("aria-hidden","true"); }
+
+  // Export/import hooks
+  exportBtn.addEventListener("click", () => { exportTxt(); closeMenu(); });
+  importBtn.addEventListener("click", () => file.click());
+
+  // Load/save init
   loadUI();
   loadData();
   setCmdMode(false);
