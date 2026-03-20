@@ -53,8 +53,22 @@
       gap:10px;
       margin:6px 0 10px;
     }
-    .titleRow{display:flex;align-items:center;gap:8px}
-    h1{margin:0;font-size:16px;letter-spacing:.2px}
+    .titleRow{display:flex;align-items:center;gap:8px;min-width:0}
+    h1{margin:0;font-size:16px;letter-spacing:.2px;white-space:nowrap}
+
+    /* Header count (only shown in mobile read-only mode) */
+    .countTop{
+      display:none;
+      font-family:var(--mono);
+      font-size:10.5px;
+      color:var(--muted);
+      border:1px solid var(--line);
+      background:color-mix(in srgb, var(--bg) 78%, transparent);
+      padding:2px 8px;
+      border-radius:999px;
+      white-space:nowrap;
+    }
+    body.roMobile .countTop{display:inline-flex}
 
     /* Command-mode indicator */
     .cmdBadge{
@@ -257,6 +271,12 @@
     }
     .menuToggle input{accent-color: var(--accent); width:14px; height:14px; margin:0}
 
+    /* Hide mobile-only menu row on desktop */
+    .mobileOnly{ display:none; }
+    @media (max-width:520px){
+      .mobileOnly{ display:flex; }
+    }
+
     /* Log */
     .log{
       margin-top:8px;
@@ -402,11 +422,7 @@
       row-gap:6px;
     }
     .helpRow{ white-space:nowrap; }
-    .helpRow b{
-      font-weight:700;
-      color:var(--muted);
-      white-space:nowrap;
-    }
+    .helpRow b{ font-weight:700; color:var(--muted); white-space:nowrap; }
     .helpFoot{
       grid-column:1 / -1;
       color:var(--muted);
@@ -415,17 +431,49 @@
       white-space:nowrap;
     }
 
+    /* ---------- Mobile Read-only Mode ---------- */
+    @media (max-width:520px){
+      /* Hide the entire editor bar in read-only */
+      body.roMobile .bar{ display:none; }
+
+      /* Increase readability in read-only */
+      body.roMobile .entry{
+        font-size:14.5px;
+        line-height:1.35;
+        padding:8px 10px;
+      }
+      body.roMobile .day{
+        font-size:12px;
+        padding:8px 10px;
+      }
+      body.roMobile .tsRight{
+        font-size:12px;
+        padding-top:3px;
+        min-width:46px;
+      }
+      body.roMobile .iconbtn{
+        width:28px;
+        height:28px;
+        border-radius:9px;
+      }
+      body.roMobile .iconbtn svg{
+        width:15px;
+        height:15px;
+      }
+
+      /* Hide edit + delete in read-only mode (as requested) */
+      body.roMobile button[data-action="edit"],
+      body.roMobile button[data-action="delete"]{
+        display:none !important;
+      }
+    }
+
     @media (max-width:520px){
       .wrap{padding:12px 10px 30px}
       textarea#input{font-size:16px}
       .btn{padding:8px 9px}
       .cmdMobile{display:inline-block}
-      .entry{padding:4px 6px}
-      .day{padding:4px 6px}
-      .iconbtn{width:22px;height:22px}
-      .iconbtn svg{width:13px;height:13px}
       .panel{top:56px; right:10px}
-      .tsRight{min-width:36px}
     }
   </style>
 </head>
@@ -437,6 +485,7 @@
         <span class="cmdBadge" id="cmdBadge" title="Command mode active (Ctrl+; again or Esc to exit)">
           <span class="dot"></span> CMD
         </span>
+        <span class="countTop" id="countTop"></span>
       </div>
 
       <div class="iconTopRow">
@@ -456,7 +505,7 @@
       </div>
     </header>
 
-    <div class="bar">
+    <div class="bar" id="bar">
       <textarea id="input" placeholder="Type an action…"></textarea>
       <button class="btn cmdMobile" id="cmdBtnMobile" title="Command mode" aria-label="Command mode">CMD</button>
       <button class="btn primary" id="add">Add</button>
@@ -487,6 +536,17 @@
         <div class="menuRight">
           <label class="menuToggle" title="Toggle light/dark">
             <input id="lightModeToggle" type="checkbox" />
+            On
+          </label>
+        </div>
+      </div>
+
+      <!-- Mobile-only: Read-only mode -->
+      <div class="menuItem mobileOnly">
+        <div class="menuLabel">Read‑only</div>
+        <div class="menuRight">
+          <label class="menuToggle" title="Mobile only: hide editor + bigger text">
+            <input id="readOnlyToggle" type="checkbox" />
             On
           </label>
         </div>
@@ -571,12 +631,13 @@
 
 <script>
 (() => {
-  const KEY = "actionLog.v18";
-  const OLD_KEYS = ["actionLog.v17","actionLog.v16","actionLog.v15","actionLog.v14","actionLog.v13","actionLog.v12","actionLog.v11","actionLog.v10","actionLog.v9","actionLog.v8","actionLog.v7","actionLog.v6","actionLog.v5","actionLog.v4","actionLog.v3","actionLog.v2","actionLog.v1"];
+  const KEY = "actionLog.v19";
+  const OLD_KEYS = ["actionLog.v18","actionLog.v17","actionLog.v16","actionLog.v15","actionLog.v14","actionLog.v13","actionLog.v12","actionLog.v11","actionLog.v10","actionLog.v9","actionLog.v8","actionLog.v7","actionLog.v6","actionLog.v5","actionLog.v4","actionLog.v3","actionLog.v2","actionLog.v1"];
 
   const UI_TODAY_ONLY   = "actionLog.ui.todayOnly";
   const UI_STARRED_ONLY = "actionLog.ui.starredOnly";
-  const UI_LIGHT_MODE   = "actionLog.ui.lightMode"; // "1" or "0"
+  const UI_LIGHT_MODE   = "actionLog.ui.lightMode";         // "1" or "0"
+  const UI_MOBILE_RO    = "actionLog.ui.mobileReadOnly";    // "1" or "0"
 
   const SIG_PLACEHOLDER = "·";
   const SIG_PRIORITY = "!";
@@ -602,7 +663,6 @@
     d: { kind:"bullet", value:"✓" },
     x: { kind:"bullet", value:"✗" },
     f: { kind:"bullet", value:"→" },
-
     p: { kind:"sig", value: SIG_PRIORITY },
     q: { kind:"sig", value: SIG_EXPLORE },
     "?": { kind:"sig", value: SIG_EXPLORE }
@@ -611,9 +671,11 @@
   const $ = (id) => document.getElementById(id);
 
   const input = $("input");
+  const bar = $("bar");
   const addBtn = $("add");
   const cmdBtnMobile = $("cmdBtnMobile");
   const countEl = $("count");
+  const countTop = $("countTop");
   const logEl = $("log");
 
   const overlay = $("overlay");
@@ -634,6 +696,7 @@
   const todayOnlyEl = $("todayOnly");
   const starredOnlyEl = $("starredOnly");
   const lightModeToggle = $("lightModeToggle");
+  const readOnlyToggle = $("readOnlyToggle");
 
   let items = [];
   let editingId = null;
@@ -641,7 +704,12 @@
   let starredOnly = false;
   let cmdMode = false;
 
-  // ----- Theme toggle (Light default) -----
+  // ---- Mobile detection
+  function isMobileView(){
+    return window.matchMedia && window.matchMedia("(max-width:520px)").matches;
+  }
+
+  // ---- Theme toggle (Light default)
   function applyLightMode(isLight){
     document.documentElement.dataset.theme = isLight ? "" : "dark";
   }
@@ -650,12 +718,35 @@
       const v = localStorage.getItem(UI_LIGHT_MODE);
       if (v === "0") return false;
       return true;
-    } catch(e){
-      return true;
-    }
+    } catch(e){ return true; }
   }
   function saveLightMode(isLight){
     try{ localStorage.setItem(UI_LIGHT_MODE, isLight ? "1" : "0"); } catch(e){}
+  }
+
+  // ---- Mobile Read-only toggle (mobile only)
+  function applyMobileReadOnly(on){
+    // only take effect in mobile viewport
+    const active = !!on && isMobileView();
+    document.body.classList.toggle("roMobile", active);
+
+    // if turning on, force exit edit mode
+    if (active && editingId){
+      editingId = null;
+      render();
+    }
+
+    // keep focus sane
+    if (!active) input && input.focus();
+  }
+  function loadMobileReadOnly(){
+    try{
+      const v = localStorage.getItem(UI_MOBILE_RO);
+      return v === "1";
+    } catch(e){ return false; }
+  }
+  function saveMobileReadOnly(on){
+    try{ localStorage.setItem(UI_MOBILE_RO, on ? "1" : "0"); } catch(e){}
   }
 
   function pad(n){ return String(n).padStart(2,"0"); }
@@ -674,30 +765,26 @@
     }[c]));
   }
 
-  // --- Timestamp insertion helpers ---
+  // Timestamp insertion
   function fmtNowStamp(){
     const d = new Date();
-    return `${fmtDate(d)} ${fmtTime(d)}`; // YYYY-MM-DD HH:mm
+    return `${fmtDate(d)} ${fmtTime(d)}`;
   }
-
   function getActiveTextarea(){
     const el = document.activeElement;
     return (el && el.tagName === "TEXTAREA") ? el : null;
   }
-
   function insertAtCursor(ta, textToInsert){
     const value = ta.value ?? "";
     const start = ta.selectionStart ?? value.length;
     const end = ta.selectionEnd ?? value.length;
-    const before = value.slice(0, start);
-    const after = value.slice(end);
-    ta.value = before + textToInsert + after;
+    ta.value = value.slice(0, start) + textToInsert + value.slice(end);
     const newPos = start + textToInsert.length;
     ta.selectionStart = ta.selectionEnd = newPos;
     ta.focus();
   }
 
-  // Prefix handling
+  // Prefix
   function parsePrefix(line){
     if (line.length < 4) return { has:false, sig:null, bullet:null, rest:line };
     const s = line[0], sp = line[1], b = line[2], sp2 = line[3];
@@ -803,7 +890,7 @@
     return true;
   }
 
-  // Display-only formatting with tone rules
+  // Tone display rules
   function formatMsgForDisplay(msg){
     const safe = escapeHtml(msg);
     if (safe.length < 4) return safe;
@@ -1001,7 +1088,9 @@
   function render(){
     const total = items.length;
     const starredCount = items.reduce((a,x)=>a + (x.starred ? 1 : 0), 0);
-    countEl.textContent = `${total} entr${total===1?"y":"ies"} · ${starredCount}★`;
+    const countText = `${total} entr${total===1?"y":"ies"} · ${starredCount}★`;
+    countEl.textContent = countText;
+    countTop.textContent = countText;
 
     if (!total){
       logEl.innerHTML = `<div class="empty">No entries yet. Type something above and press Add.</div>`;
@@ -1090,6 +1179,7 @@
 
     logEl.innerHTML = html;
 
+    // chevron only if truncated
     requestAnimationFrame(() => {
       const rows = logEl.querySelectorAll(".entry");
       rows.forEach(row => {
@@ -1178,6 +1268,24 @@
     applyLightMode(isLight);
   });
 
+  // Mobile Read-only (toggle exists only in mobile menu via CSS)
+  const initialRO = loadMobileReadOnly();
+  if (readOnlyToggle) readOnlyToggle.checked = initialRO;
+  applyMobileReadOnly(initialRO);
+
+  if (readOnlyToggle){
+    readOnlyToggle.addEventListener("change", () => {
+      const on = !!readOnlyToggle.checked;
+      saveMobileReadOnly(on);
+      applyMobileReadOnly(on);
+    });
+  }
+
+  // If user rotates / resizes, re-apply mobile RO correctly
+  window.addEventListener("resize", () => {
+    applyMobileReadOnly(loadMobileReadOnly());
+  });
+
   // Filters
   todayOnlyEl.addEventListener("change", () => {
     todayOnly = !!todayOnlyEl.checked;
@@ -1192,6 +1300,7 @@
 
   // Add
   addBtn.addEventListener("click", () => {
+    if (document.body.classList.contains("roMobile") && isMobileView()) return;
     addEntry(input.value);
     input.value = "";
     input.focus();
@@ -1199,6 +1308,8 @@
 
   // CMD typing + Add on Enter
   input.addEventListener("keydown", (e) => {
+    if (document.body.classList.contains("roMobile") && isMobileView()) return;
+
     if (cmdMode){
       if (["Shift","Control","Alt","Meta"].includes(e.key)) return;
       e.preventDefault();
@@ -1249,12 +1360,13 @@
     editingId = null;
     saveData();
     render();
-    input.focus();
+    if (!(document.body.classList.contains("roMobile") && isMobileView())) input.focus();
     closeMenu();
   });
 
   // Mobile CMD button
   cmdBtnMobile.addEventListener("click", () => {
+    if (document.body.classList.contains("roMobile") && isMobileView()) return;
     setCmdMode(!cmdMode);
     input.focus();
   });
@@ -1264,9 +1376,7 @@
     const isMac = navigator.platform.toLowerCase().includes("mac");
     const mod = isMac ? e.metaKey : e.ctrlKey;
 
-    // Insert timestamp into active textarea (editor mode)
-    // Windows/Linux: Ctrl+Shift+T
-    // Mac: Cmd+Shift+T (may conflict with browser "reopen closed tab")
+    // Insert timestamp into active textarea (new entry or edit textarea)
     if (mod && e.shiftKey && (e.key === "T" || e.key === "t")){
       const ta = getActiveTextarea();
       if (ta){
@@ -1286,12 +1396,16 @@
     }
 
     if (mod && e.key === "/"){
-      e.preventDefault();
-      input.focus();
+      // focus input only if editor visible
+      if (!(document.body.classList.contains("roMobile") && isMobileView())){
+        e.preventDefault();
+        input.focus();
+      }
       return;
     }
 
     if (mod && e.key === ";"){
+      if (document.body.classList.contains("roMobile") && isMobileView()) return;
       e.preventDefault();
       setCmdMode(!cmdMode);
       return;
@@ -1306,7 +1420,7 @@
     }
   });
 
-  // Log actions
+  // Log actions (expand/star/edit/save/delete)
   logEl.addEventListener("click", (e) => {
     const btn = e.target.closest("button[data-action]");
     if (!btn) return;
@@ -1335,6 +1449,12 @@
     }
 
     if (action === "star"){ toggleStar(id); render(); return; }
+
+    // In mobile read-only, block edit/delete/save/cancel
+    if (document.body.classList.contains("roMobile") && isMobileView()){
+      if (action === "edit" || action === "delete" || action === "save" || action === "cancel") return;
+    }
+
     if (action === "edit"){ editingId = id; render(); return; }
     if (action === "cancel"){ editingId = null; render(); return; }
 
@@ -1357,12 +1477,14 @@
     }
   });
 
-  // Init
+  // ----- Init -----
   loadUI();
   loadData();
   setCmdMode(false);
   render();
-  input.focus();
+
+  // focus only if editor visible
+  if (!(document.body.classList.contains("roMobile") && isMobileView())) input.focus();
 })();
 </script>
 </body>
