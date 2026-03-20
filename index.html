@@ -59,7 +59,7 @@
       align-items:center;
       gap:8px;
       min-width:0;
-      flex-wrap:wrap; /* allows metadata to wrap if needed on narrow screens */
+      flex-wrap:wrap;
     }
 
     h1{
@@ -105,7 +105,6 @@
       font-size:9.5px;
       opacity:.85;
     }
-    /* show hint only when focused (desktop) */
     .syncMeta:focus-within .syncHint{ display:inline; }
 
     /* mobile display-only */
@@ -121,14 +120,13 @@
       white-space:nowrap;
     }
 
-    /* On mobile: hide input, show text */
     @media (max-width:520px){
       .syncInput{ display:none; }
       .syncText{ display:inline-flex; }
       .syncHint{ display:none !important; }
     }
 
-    /* Header count (only shown in mobile read-only mode) */
+    /* Header count (shown when Read-only is ON) */
     .countTop{
       display:none;
       font-family:var(--mono);
@@ -140,7 +138,7 @@
       border-radius:999px;
       white-space:nowrap;
     }
-    body.roMobile .countTop{display:inline-flex}
+    body.ro .countTop{display:inline-flex}
 
     /* Command-mode indicator */
     .cmdBadge{
@@ -343,12 +341,6 @@
     }
     .menuToggle input{accent-color: var(--accent); width:14px; height:14px; margin:0}
 
-    /* Hide mobile-only menu row on desktop */
-    .mobileOnly{ display:none; }
-    @media (max-width:520px){
-      .mobileOnly{ display:flex; }
-    }
-
     /* Log */
     .log{
       margin-top:8px;
@@ -443,9 +435,6 @@
     }
     .iconbtn.danger{border-color:color-mix(in srgb, var(--danger) 45%, var(--line))}
     .iconbtn.danger svg{stroke:color-mix(in srgb, var(--danger) 88%, var(--text))}
-    .iconbtn.ok{border-color:color-mix(in srgb, var(--ok) 45%, var(--line))}
-    .iconbtn.ok svg{stroke:var(--ok)}
-
     .iconbtn.star{border-color:color-mix(in srgb, var(--star) 35%, var(--line))}
     .iconbtn.star svg{stroke:var(--star)}
     .iconbtn.star.on{border-color:color-mix(in srgb, var(--star) 60%, var(--line))}
@@ -486,7 +475,6 @@
     #helpPanel .panelBody{ padding:8px 10px; }
     .compactHelp{ font-size:10px; line-height:1.25; }
     .compactHelp .kbd{ padding:0 5px; font-size:9.5px; }
-
     .helpGrid{
       display:grid;
       grid-template-columns:auto 1fr;
@@ -503,37 +491,38 @@
       white-space:nowrap;
     }
 
-    /* ---------- Mobile Read-only Mode ---------- */
-    @media (max-width:520px){
-      body.roMobile .bar{ display:none; }
+    /* ---------- Read-only (GLOBAL) ---------- */
+    body.ro .bar{ display:none; }
+    body.ro button[data-action="star"],
+    body.ro button[data-action="edit"],
+    body.ro button[data-action="delete"]{
+      display:none !important;
+    }
 
-      body.roMobile .entry{
+    /* Mobile readability bump only when Read-only ON */
+    @media (max-width:520px){
+      body.ro .entry{
         font-size:14.5px;
         line-height:1.35;
         padding:8px 10px;
       }
-      body.roMobile .day{
+      body.ro .day{
         font-size:12px;
         padding:8px 10px;
       }
-      body.roMobile .tsRight{
+      body.ro .tsRight{
         font-size:12px;
         padding-top:3px;
         min-width:46px;
       }
-      body.roMobile .iconbtn{
+      body.ro .iconbtn{
         width:28px;
         height:28px;
         border-radius:9px;
       }
-      body.roMobile .iconbtn svg{
+      body.ro .iconbtn svg{
         width:15px;
         height:15px;
-      }
-
-      body.roMobile button[data-action="edit"],
-      body.roMobile button[data-action="delete"]{
-        display:none !important;
       }
     }
 
@@ -552,7 +541,6 @@
       <div class="titleRow">
         <h1>Action Log</h1>
 
-        <!-- Last Sync (web editable, mobile display-only) -->
         <div class="syncMeta" aria-label="Last sync completed">
           <span class="syncLabel">Last sync completed:</span>
           <input id="lastSyncInput" class="syncInput" type="text" inputmode="numeric"
@@ -621,11 +609,11 @@
         </div>
       </div>
 
-      <!-- Mobile-only: Read-only mode -->
-      <div class="menuItem mobileOnly">
+      <!-- Global Read-only (web + mobile) -->
+      <div class="menuItem">
         <div class="menuLabel">Read‑only</div>
         <div class="menuRight">
-          <label class="menuToggle" title="Mobile only: hide editor + bigger text">
+          <label class="menuToggle" title="Hide editor + disable changes">
             <input id="readOnlyToggle" type="checkbox" />
             On
           </label>
@@ -711,13 +699,14 @@
 
 <script>
 (() => {
-  const KEY = "actionLog.v20";
-  const OLD_KEYS = ["actionLog.v19","actionLog.v18","actionLog.v17","actionLog.v16","actionLog.v15","actionLog.v14","actionLog.v13","actionLog.v12","actionLog.v11","actionLog.v10","actionLog.v9","actionLog.v8","actionLog.v7","actionLog.v6","actionLog.v5","actionLog.v4","actionLog.v3","actionLog.v2","actionLog.v1"];
+  const KEY = "actionLog.v21";
+  const OLD_KEYS = ["actionLog.v20","actionLog.v19","actionLog.v18","actionLog.v17","actionLog.v16","actionLog.v15","actionLog.v14","actionLog.v13","actionLog.v12","actionLog.v11","actionLog.v10","actionLog.v9","actionLog.v8","actionLog.v7","actionLog.v6","actionLog.v5","actionLog.v4","actionLog.v3","actionLog.v2","actionLog.v1"];
 
   const UI_TODAY_ONLY   = "actionLog.ui.todayOnly";
   const UI_STARRED_ONLY = "actionLog.ui.starredOnly";
   const UI_LIGHT_MODE   = "actionLog.ui.lightMode";         // "1" or "0"
-  const UI_MOBILE_RO    = "actionLog.ui.mobileReadOnly";    // "1" or "0"
+  const UI_READ_ONLY    = "actionLog.ui.readOnly";          // "1" or "0"
+  const UI_MOBILE_RO    = "actionLog.ui.mobileReadOnly";    // legacy key (migration only)
   const UI_LAST_SYNC    = "actionLog.ui.lastSyncCompleted"; // string
 
   const SIG_PLACEHOLDER = "·";
@@ -752,7 +741,6 @@
   const $ = (id) => document.getElementById(id);
 
   const input = $("input");
-  const bar = $("bar");
   const addBtn = $("add");
   const cmdBtnMobile = $("cmdBtnMobile");
   const countEl = $("count");
@@ -779,7 +767,6 @@
   const lightModeToggle = $("lightModeToggle");
   const readOnlyToggle = $("readOnlyToggle");
 
-  // Last sync UI
   const lastSyncInput = $("lastSyncInput");
   const lastSyncText = $("lastSyncText");
 
@@ -788,8 +775,8 @@
   let todayOnly = true;
   let starredOnly = false;
   let cmdMode = false;
+  let readOnly = false;
 
-  // ---- Mobile detection
   function isMobileView(){
     return window.matchMedia && window.matchMedia("(max-width:520px)").matches;
   }
@@ -809,21 +796,33 @@
     try{ localStorage.setItem(UI_LIGHT_MODE, isLight ? "1" : "0"); } catch(e){}
   }
 
-  // ---- Mobile Read-only toggle (mobile only)
-  function applyMobileReadOnly(on){
-    const active = !!on && isMobileView();
-    document.body.classList.toggle("roMobile", active);
-    if (active && editingId){
+  // ---- Global Read-only
+  function applyReadOnly(on){
+    readOnly = !!on;
+    document.body.classList.toggle("ro", readOnly);
+
+    // Exit any editing if turning on
+    if (readOnly && editingId){
       editingId = null;
       render();
     }
-    if (!active) input && input.focus();
   }
-  function loadMobileReadOnly(){
-    try{ return localStorage.getItem(UI_MOBILE_RO) === "1"; } catch(e){ return false; }
+  function loadReadOnly(){
+    try{
+      const v = localStorage.getItem(UI_READ_ONLY);
+      if (v === "1") return true;
+      if (v === "0") return false;
+      // migrate legacy mobile read-only if present
+      const legacy = localStorage.getItem(UI_MOBILE_RO);
+      if (legacy === "1"){
+        localStorage.setItem(UI_READ_ONLY, "1");
+        return true;
+      }
+    } catch(e){}
+    return false;
   }
-  function saveMobileReadOnly(on){
-    try{ localStorage.setItem(UI_MOBILE_RO, on ? "1" : "0"); } catch(e){}
+  function saveReadOnly(on){
+    try{ localStorage.setItem(UI_READ_ONLY, on ? "1" : "0"); } catch(e){}
   }
 
   // ---- Last Sync storage
@@ -861,12 +860,12 @@
     return `${fmtDate(d)} ${fmtTime(d)}`;
   }
 
-  // active editable field: textarea OR lastSyncInput (web only)
   function getActiveEditableField(){
     const el = document.activeElement;
     if (!el) return null;
     if (el.tagName === "TEXTAREA") return el;
-    if (el === lastSyncInput && !isMobileView()) return el; // web only editable
+    // Last sync is metadata; allow editing on web even in read-only
+    if (el === lastSyncInput && !isMobileView()) return el;
     return null;
   }
 
@@ -880,7 +879,6 @@
     if (typeof el.selectionEnd === "number") el.selectionEnd = newPos;
     el.focus();
 
-    // if writing into lastSyncInput, persist + update mobile display
     if (el === lastSyncInput){
       const v = (lastSyncInput.value || "").trim();
       saveLastSync(v);
@@ -953,6 +951,9 @@
   }
 
   function applyCmdToActive(kind, value){
+    // Read-only blocks changing content
+    if (readOnly) return false;
+
     const ta = document.activeElement && document.activeElement.tagName === "TEXTAREA" ? document.activeElement : null;
     if (!ta) return false;
 
@@ -1064,6 +1065,7 @@
   }
 
   function addEntry(msg){
+    if (readOnly) return;
     const text = (msg ?? "").toString().trim();
     if (!text) return;
     const ts = Date.now();
@@ -1074,6 +1076,7 @@
   }
 
   function updateEntry(id, newMsg){
+    if (readOnly) return false;
     const text = (newMsg ?? "").toString().trim();
     if (!text) return false;
     const idx = items.findIndex(x => x.id === id);
@@ -1084,6 +1087,7 @@
   }
 
   function toggleStar(id){
+    if (readOnly) return false;
     const idx = items.findIndex(x => x.id === id);
     if (idx === -1) return false;
     items[idx].starred = !items[idx].starred;
@@ -1092,6 +1096,7 @@
   }
 
   function deleteEntry(id){
+    if (readOnly) return false;
     const idx = items.findIndex(x => x.id === id);
     if (idx === -1) return false;
     items.splice(idx, 1);
@@ -1129,6 +1134,7 @@
 
   // CMD
   function setCmdMode(on){
+    if (readOnly) return; // no command mode changes in read-only
     cmdMode = on;
     cmdBadge.classList.toggle("on", on);
     if (cmdBtnMobile){
@@ -1139,6 +1145,8 @@
   }
 
   function handleCommandKey(key){
+    if (readOnly) return false;
+
     const k = (key || "").toLowerCase();
 
     if (k === "o"){ toggleMenu(); return true; }
@@ -1197,7 +1205,7 @@
     countTop.textContent = countText;
 
     if (!total){
-      logEl.innerHTML = `<div class="empty">No entries yet. Type something above and press Add.</div>`;
+      logEl.innerHTML = `<div class="empty">No entries yet.</div>`;
       return;
     }
 
@@ -1283,7 +1291,6 @@
 
     logEl.innerHTML = html;
 
-    // show chevron only if truncated
     requestAnimationFrame(() => {
       const rows = logEl.querySelectorAll(".entry");
       rows.forEach(row => {
@@ -1354,7 +1361,7 @@
     return imported;
   }
 
-  // --------- Event wiring ----------
+  // Panels
   menuBtn.addEventListener("click", toggleMenu);
   menuClose.addEventListener("click", closeMenu);
   helpBtn.addEventListener("click", toggleHelp);
@@ -1371,10 +1378,18 @@
     applyLightMode(isLight);
   });
 
+  // Read-only
+  const initialRO = loadReadOnly();
+  applyReadOnly(initialRO);
+  readOnlyToggle.checked = initialRO;
+  readOnlyToggle.addEventListener("change", () => {
+    const on = !!readOnlyToggle.checked;
+    saveReadOnly(on);
+    applyReadOnly(on);
+  });
+
   // Last sync init
   setLastSyncUI(loadLastSync());
-
-  // Web-only: save on blur / Enter
   if (lastSyncInput){
     lastSyncInput.addEventListener("blur", () => {
       if (isMobileView()) return;
@@ -1391,23 +1406,9 @@
     });
   }
 
-  // Mobile read-only
-  const initialRO = loadMobileReadOnly();
-  if (readOnlyToggle) readOnlyToggle.checked = initialRO;
-  applyMobileReadOnly(initialRO);
-
-  if (readOnlyToggle){
-    readOnlyToggle.addEventListener("change", () => {
-      const on = !!readOnlyToggle.checked;
-      saveMobileReadOnly(on);
-      applyMobileReadOnly(on);
-    });
-  }
-
-  // Re-apply on resize (rotation)
+  // Re-apply on resize (read-only affects mobile font bump)
   window.addEventListener("resize", () => {
-    applyMobileReadOnly(loadMobileReadOnly());
-    // Keep last sync display in sync (input hidden on mobile anyway)
+    applyReadOnly(loadReadOnly());
     setLastSyncUI(loadLastSync());
   });
 
@@ -1425,7 +1426,7 @@
 
   // Add
   addBtn.addEventListener("click", () => {
-    if (document.body.classList.contains("roMobile") && isMobileView()) return;
+    if (readOnly) return;
     addEntry(input.value);
     input.value = "";
     input.focus();
@@ -1433,7 +1434,7 @@
 
   // CMD typing + Add on Enter
   input.addEventListener("keydown", (e) => {
-    if (document.body.classList.contains("roMobile") && isMobileView()) return;
+    if (readOnly) return;
 
     if (cmdMode){
       if (["Shift","Control","Alt","Meta"].includes(e.key)) return;
@@ -1479,19 +1480,20 @@
   });
 
   clearBtn.addEventListener("click", () => {
+    if (readOnly) return;
     const ok = confirm("Clear ALL entries? This cannot be undone (export first if needed).");
     if (!ok) return;
     items = [];
     editingId = null;
     saveData();
     render();
-    if (!(document.body.classList.contains("roMobile") && isMobileView())) input.focus();
+    input.focus();
     closeMenu();
   });
 
   // Mobile CMD button
   cmdBtnMobile.addEventListener("click", () => {
-    if (document.body.classList.contains("roMobile") && isMobileView()) return;
+    if (readOnly) return;
     setCmdMode(!cmdMode);
     input.focus();
   });
@@ -1512,7 +1514,7 @@
     }
 
     if (e.key === "Escape"){
-      if (cmdMode){ e.preventDefault(); setCmdMode(false); return; }
+      if (cmdMode){ e.preventDefault(); cmdMode = false; setCmdMode(false); return; }
       if (anyPanelOpen()){
         e.preventDefault();
         closeMenu(); closeHelp();
@@ -1521,7 +1523,7 @@
     }
 
     if (mod && e.key === "/"){
-      if (!(document.body.classList.contains("roMobile") && isMobileView())){
+      if (!readOnly){
         e.preventDefault();
         input.focus();
       }
@@ -1529,13 +1531,14 @@
     }
 
     if (mod && e.key === ";"){
-      if (document.body.classList.contains("roMobile") && isMobileView()) return;
+      if (readOnly) return;
       e.preventDefault();
       setCmdMode(!cmdMode);
       return;
     }
 
     if (cmdMode){
+      if (readOnly) return;
       if (["Shift","Control","Alt","Meta"].includes(e.key)) return;
       e.preventDefault();
       const handled = handleCommandKey(e.key);
@@ -1544,7 +1547,7 @@
     }
   });
 
-  // Log actions (expand/star/edit/save/delete)
+  // Log actions
   logEl.addEventListener("click", (e) => {
     const btn = e.target.closest("button[data-action]");
     if (!btn) return;
@@ -1572,13 +1575,12 @@
       return;
     }
 
-    if (action === "star"){ toggleStar(id); render(); return; }
-
-    // In mobile read-only, block edit/delete/save/cancel
-    if (document.body.classList.contains("roMobile") && isMobileView()){
-      if (action === "edit" || action === "delete" || action === "save" || action === "cancel") return;
+    // Block ALL modifying actions in read-only (including star)
+    if (readOnly){
+      return;
     }
 
+    if (action === "star"){ toggleStar(id); render(); return; }
     if (action === "edit"){ editingId = id; render(); return; }
     if (action === "cancel"){ editingId = null; render(); return; }
 
@@ -1607,7 +1609,8 @@
   setCmdMode(false);
   render();
 
-  if (!(document.body.classList.contains("roMobile") && isMobileView())) input.focus();
+  // Focus only if not read-only
+  if (!readOnly) input.focus();
 })();
 </script>
 </body>
