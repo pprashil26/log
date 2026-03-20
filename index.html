@@ -147,25 +147,6 @@
       line-height:1.35;
     }
     .muted{color:var(--muted)}
-    .section{margin-top:10px}
-    .section:first-child{margin-top:0}
-    .sectionTitle{
-      color:var(--muted);
-      font-size:10.5px;
-      letter-spacing:.2px;
-      margin-bottom:6px;
-      text-transform:uppercase;
-    }
-    .rowLine{
-      display:flex;
-      gap:10px;
-      justify-content:space-between;
-      padding:4px 0;
-      border-bottom:1px dashed color-mix(in srgb, var(--line) 55%, transparent);
-    }
-    .rowLine:last-child{border-bottom:none}
-    .keys{white-space:nowrap}
-    .desc{color:var(--text);opacity:.95;flex:1;text-align:right}
     .kbd{
       display:inline-block;
       border:1px solid color-mix(in srgb, var(--line) 92%, transparent);
@@ -409,10 +390,10 @@
     .empty{padding:12px;color:var(--muted);font-family:var(--mono);font-size:11.5px}
     .footer{margin-top:6px;color:var(--muted);font-size:11px}
 
-    /* ---------- HELP: Layer 3 micro‑polish (compact) ---------- */
-    #helpPanel .panelBody{ padding:8px 10px; } /* reduce padding only for Help */
+    /* ---------- HELP: compact ---------- */
+    #helpPanel .panelBody{ padding:8px 10px; }
     .compactHelp{ font-size:10px; line-height:1.25; }
-    .compactHelp .kbd{ padding:0 5px; font-size:9.5px; } /* smaller kbd badges */
+    .compactHelp .kbd{ padding:0 5px; font-size:9.5px; }
 
     .helpGrid{
       display:grid;
@@ -496,9 +477,7 @@
     <div class="panelHead">
       <div class="panelTitle">Menu</div>
       <button class="closeBtn" id="menuClose" aria-label="Close menu">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M18 6L6 18"></path><path d="M6 6l12 12"></path>
-        </svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18"></path><path d="M6 6l12 12"></path></svg>
       </button>
     </div>
 
@@ -545,14 +524,12 @@
     </div>
   </div>
 
-  <!-- Help panel (ultra-compact + Layer 3 micro polish) -->
+  <!-- Help panel -->
   <div class="panel" id="helpPanel" role="dialog" aria-modal="true" aria-label="Help">
     <div class="panelHead">
       <div class="panelTitle">Help</div>
       <button class="closeBtn" id="helpClose" aria-label="Close help">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M18 6L6 18"></path><path d="M6 6l12 12"></path>
-        </svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18"></path><path d="M6 6l12 12"></path></svg>
       </button>
     </div>
 
@@ -560,6 +537,9 @@
       <div class="helpGrid">
         <div class="helpRow"><b>CMD</b></div>
         <div class="helpRow"><span class="kbd">Ctrl</span><span class="kbd">;</span> / Tap CMD</div>
+
+        <div class="helpRow"><b>TS</b></div>
+        <div class="helpRow"><span class="kbd">Ctrl</span><span class="kbd">Shift</span><span class="kbd">T</span> (Mac: ⌘⇧T)</div>
 
         <div class="helpRow"><b>Bullets</b></div>
         <div class="helpRow">
@@ -573,9 +553,7 @@
         </div>
 
         <div class="helpRow"><b>Sign</b></div>
-        <div class="helpRow">
-          <span class="kbd">p</span>! <span class="kbd">q</span>?
-        </div>
+        <div class="helpRow"><span class="kbd">p</span>! <span class="kbd">q</span>?</div>
 
         <div class="helpRow"><b>Colors</b></div>
         <div class="helpRow">○ = blue · ! = red+bold</div>
@@ -593,8 +571,8 @@
 
 <script>
 (() => {
-  const KEY = "actionLog.v17";
-  const OLD_KEYS = ["actionLog.v16","actionLog.v15","actionLog.v14","actionLog.v13","actionLog.v12","actionLog.v11","actionLog.v10","actionLog.v9","actionLog.v8","actionLog.v7","actionLog.v6","actionLog.v5","actionLog.v4","actionLog.v3","actionLog.v2","actionLog.v1"];
+  const KEY = "actionLog.v18";
+  const OLD_KEYS = ["actionLog.v17","actionLog.v16","actionLog.v15","actionLog.v14","actionLog.v13","actionLog.v12","actionLog.v11","actionLog.v10","actionLog.v9","actionLog.v8","actionLog.v7","actionLog.v6","actionLog.v5","actionLog.v4","actionLog.v3","actionLog.v2","actionLog.v1"];
 
   const UI_TODAY_ONLY   = "actionLog.ui.todayOnly";
   const UI_STARRED_ONLY = "actionLog.ui.starredOnly";
@@ -696,6 +674,30 @@
     }[c]));
   }
 
+  // --- Timestamp insertion helpers ---
+  function fmtNowStamp(){
+    const d = new Date();
+    return `${fmtDate(d)} ${fmtTime(d)}`; // YYYY-MM-DD HH:mm
+  }
+
+  function getActiveTextarea(){
+    const el = document.activeElement;
+    return (el && el.tagName === "TEXTAREA") ? el : null;
+  }
+
+  function insertAtCursor(ta, textToInsert){
+    const value = ta.value ?? "";
+    const start = ta.selectionStart ?? value.length;
+    const end = ta.selectionEnd ?? value.length;
+    const before = value.slice(0, start);
+    const after = value.slice(end);
+    ta.value = before + textToInsert + after;
+    const newPos = start + textToInsert.length;
+    ta.selectionStart = ta.selectionEnd = newPos;
+    ta.focus();
+  }
+
+  // Prefix handling
   function parsePrefix(line){
     if (line.length < 4) return { has:false, sig:null, bullet:null, rest:line };
     const s = line[0], sp = line[1], b = line[2], sp2 = line[3];
@@ -760,7 +762,7 @@
   }
 
   function applyCmdToActive(kind, value){
-    const ta = document.activeElement && document.activeElement.tagName === "TEXTAREA" ? document.activeElement : null;
+    const ta = getActiveTextarea();
     if (!ta) return false;
 
     const text = ta.value;
@@ -801,9 +803,7 @@
     return true;
   }
 
-  // Display-only formatting with tone rules:
-  // - Event bullet ○ => blue
-  // - Priority sign ! (non-event) => red + bold
+  // Display-only formatting with tone rules
   function formatMsgForDisplay(msg){
     const safe = escapeHtml(msg);
     if (safe.length < 4) return safe;
@@ -1160,14 +1160,15 @@
     return imported;
   }
 
-  // Panels wiring
+  // --------- Event wiring ----------
+  // Panels
   menuBtn.addEventListener("click", toggleMenu);
   menuClose.addEventListener("click", closeMenu);
   helpBtn.addEventListener("click", toggleHelp);
   helpClose.addEventListener("click", closeHelp);
   overlay.addEventListener("click", () => { closeMenu(); closeHelp(); });
 
-  // Theme wiring
+  // Theme
   const initialLight = loadLightMode();
   applyLightMode(initialLight);
   lightModeToggle.checked = initialLight;
@@ -1258,10 +1259,22 @@
     input.focus();
   });
 
-  // Desktop CMD + panel ESC
+  // Desktop: timestamp insert + CMD + focus + ESC
   document.addEventListener("keydown", (e) => {
     const isMac = navigator.platform.toLowerCase().includes("mac");
     const mod = isMac ? e.metaKey : e.ctrlKey;
+
+    // Insert timestamp into active textarea (editor mode)
+    // Windows/Linux: Ctrl+Shift+T
+    // Mac: Cmd+Shift+T (may conflict with browser "reopen closed tab")
+    if (mod && e.shiftKey && (e.key === "T" || e.key === "t")){
+      const ta = getActiveTextarea();
+      if (ta){
+        e.preventDefault();
+        insertAtCursor(ta, fmtNowStamp());
+      }
+      return;
+    }
 
     if (e.key === "Escape"){
       if (cmdMode){ e.preventDefault(); setCmdMode(false); return; }
