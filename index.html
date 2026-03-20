@@ -683,14 +683,16 @@
         <div class="helpRow"><b>Sign</b></div>
         <div class="helpRow"><span class="kbd">p</span>! <span class="kbd">q</span>?</div>
 
-        <div class="helpRow"><b>Colors</b></div>
-        <div class="helpRow">○ = blue · ! = red+bold</div>
-
         <div class="helpRow"><b>Filter</b></div>
         <div class="helpRow"><span class="kbd">t</span>today <span class="kbd">s</span>★</div>
 
         <div class="helpRow"><b>UI</b></div>
-        <div class="helpRow"><span class="kbd">o</span>menu <span class="kbd">h</span>help <span class="kbd">Esc</span>close</div>
+        <div class="helpRow">
+          <span class="kbd">o</span>menu
+          <span class="kbd">h</span>help
+          <span class="kbd">r</span>RO
+          <span class="kbd">Esc</span>close
+        </div>
 
         <div class="helpRow helpFoot">Prefix: · ␠ bullet ␠ text</div>
       </div>
@@ -699,14 +701,14 @@
 
 <script>
 (() => {
-  const KEY = "actionLog.v21";
-  const OLD_KEYS = ["actionLog.v20","actionLog.v19","actionLog.v18","actionLog.v17","actionLog.v16","actionLog.v15","actionLog.v14","actionLog.v13","actionLog.v12","actionLog.v11","actionLog.v10","actionLog.v9","actionLog.v8","actionLog.v7","actionLog.v6","actionLog.v5","actionLog.v4","actionLog.v3","actionLog.v2","actionLog.v1"];
+  const KEY = "actionLog.v22";
+  const OLD_KEYS = ["actionLog.v21","actionLog.v20","actionLog.v19","actionLog.v18","actionLog.v17","actionLog.v16","actionLog.v15","actionLog.v14","actionLog.v13","actionLog.v12","actionLog.v11","actionLog.v10","actionLog.v9","actionLog.v8","actionLog.v7","actionLog.v6","actionLog.v5","actionLog.v4","actionLog.v3","actionLog.v2","actionLog.v1"];
 
   const UI_TODAY_ONLY   = "actionLog.ui.todayOnly";
   const UI_STARRED_ONLY = "actionLog.ui.starredOnly";
   const UI_LIGHT_MODE   = "actionLog.ui.lightMode";         // "1" or "0"
   const UI_READ_ONLY    = "actionLog.ui.readOnly";          // "1" or "0"
-  const UI_MOBILE_RO    = "actionLog.ui.mobileReadOnly";    // legacy key (migration only)
+  const UI_MOBILE_RO    = "actionLog.ui.mobileReadOnly";    // legacy (migration only)
   const UI_LAST_SYNC    = "actionLog.ui.lastSyncCompleted"; // string
 
   const SIG_PLACEHOLDER = "·";
@@ -800,19 +802,18 @@
   function applyReadOnly(on){
     readOnly = !!on;
     document.body.classList.toggle("ro", readOnly);
-
-    // Exit any editing if turning on
     if (readOnly && editingId){
       editingId = null;
       render();
     }
+    // keep toggle in sync
+    if (readOnlyToggle) readOnlyToggle.checked = readOnly;
   }
   function loadReadOnly(){
     try{
       const v = localStorage.getItem(UI_READ_ONLY);
       if (v === "1") return true;
       if (v === "0") return false;
-      // migrate legacy mobile read-only if present
       const legacy = localStorage.getItem(UI_MOBILE_RO);
       if (legacy === "1"){
         localStorage.setItem(UI_READ_ONLY, "1");
@@ -824,8 +825,13 @@
   function saveReadOnly(on){
     try{ localStorage.setItem(UI_READ_ONLY, on ? "1" : "0"); } catch(e){}
   }
+  function toggleReadOnly(){
+    const next = !readOnly;
+    saveReadOnly(next);
+    applyReadOnly(next);
+  }
 
-  // ---- Last Sync storage
+  // ---- Last Sync
   function loadLastSync(){
     try{ return (localStorage.getItem(UI_LAST_SYNC) || "").trim(); } catch(e){ return ""; }
   }
@@ -864,7 +870,7 @@
     const el = document.activeElement;
     if (!el) return null;
     if (el.tagName === "TEXTAREA") return el;
-    // Last sync is metadata; allow editing on web even in read-only
+    // allow last sync editing on web even if read-only
     if (el === lastSyncInput && !isMobileView()) return el;
     return null;
   }
@@ -951,9 +957,7 @@
   }
 
   function applyCmdToActive(kind, value){
-    // Read-only blocks changing content
     if (readOnly) return false;
-
     const ta = document.activeElement && document.activeElement.tagName === "TEXTAREA" ? document.activeElement : null;
     if (!ta) return false;
 
@@ -1086,15 +1090,6 @@
     return true;
   }
 
-  function toggleStar(id){
-    if (readOnly) return false;
-    const idx = items.findIndex(x => x.id === id);
-    if (idx === -1) return false;
-    items[idx].starred = !items[idx].starred;
-    saveData();
-    return true;
-  }
-
   function deleteEntry(id){
     if (readOnly) return false;
     const idx = items.findIndex(x => x.id === id);
@@ -1134,7 +1129,6 @@
 
   // CMD
   function setCmdMode(on){
-    if (readOnly) return; // no command mode changes in read-only
     cmdMode = on;
     cmdBadge.classList.toggle("on", on);
     if (cmdBtnMobile){
@@ -1145,12 +1139,20 @@
   }
 
   function handleCommandKey(key){
-    if (readOnly) return false;
-
     const k = (key || "").toLowerCase();
 
+    // Panels (allowed even in read-only)
     if (k === "o"){ toggleMenu(); return true; }
     if (k === "h"){ toggleHelp(); return true; }
+
+    // ✅ NEW: CMD → r toggles Read-only (allowed always)
+    if (k === "r"){
+      toggleReadOnly();
+      return true;
+    }
+
+    // Filters/bullets/signifiers blocked in read-only
+    if (readOnly) return false;
 
     if (k === "t"){
       todayOnly = !todayOnly;
@@ -1291,6 +1293,7 @@
 
     logEl.innerHTML = html;
 
+    // show chevrons only if truncated in collapsed state
     requestAnimationFrame(() => {
       const rows = logEl.querySelectorAll(".entry");
       rows.forEach(row => {
@@ -1381,14 +1384,13 @@
   // Read-only
   const initialRO = loadReadOnly();
   applyReadOnly(initialRO);
-  readOnlyToggle.checked = initialRO;
   readOnlyToggle.addEventListener("change", () => {
     const on = !!readOnlyToggle.checked;
     saveReadOnly(on);
     applyReadOnly(on);
   });
 
-  // Last sync init
+  // Last sync
   setLastSyncUI(loadLastSync());
   if (lastSyncInput){
     lastSyncInput.addEventListener("blur", () => {
@@ -1406,7 +1408,6 @@
     });
   }
 
-  // Re-apply on resize (read-only affects mobile font bump)
   window.addEventListener("resize", () => {
     applyReadOnly(loadReadOnly());
     setLastSyncUI(loadLastSync());
@@ -1435,7 +1436,6 @@
   // CMD typing + Add on Enter
   input.addEventListener("keydown", (e) => {
     if (readOnly) return;
-
     if (cmdMode){
       if (["Shift","Control","Alt","Meta"].includes(e.key)) return;
       e.preventDefault();
@@ -1493,17 +1493,16 @@
 
   // Mobile CMD button
   cmdBtnMobile.addEventListener("click", () => {
-    if (readOnly) return;
     setCmdMode(!cmdMode);
-    input.focus();
+    if (!readOnly) input.focus();
   });
 
-  // Desktop: timestamp insert + CMD + focus + ESC
+  // Desktop: TS insert + CMD + focus + ESC
   document.addEventListener("keydown", (e) => {
     const isMac = navigator.platform.toLowerCase().includes("mac");
     const mod = isMac ? e.metaKey : e.ctrlKey;
 
-    // Insert timestamp into active editable field (textarea OR lastSyncInput on web)
+    // TS shortcut: Ctrl+Shift+T / Cmd+Shift+T
     if (mod && e.shiftKey && (e.key === "T" || e.key === "t")){
       const el = getActiveEditableField();
       if (el){
@@ -1514,7 +1513,7 @@
     }
 
     if (e.key === "Escape"){
-      if (cmdMode){ e.preventDefault(); cmdMode = false; setCmdMode(false); return; }
+      if (cmdMode){ e.preventDefault(); setCmdMode(false); return; }
       if (anyPanelOpen()){
         e.preventDefault();
         closeMenu(); closeHelp();
@@ -1530,15 +1529,14 @@
       return;
     }
 
+    // Toggle CMD: Ctrl+;
     if (mod && e.key === ";"){
-      if (readOnly) return;
       e.preventDefault();
       setCmdMode(!cmdMode);
       return;
     }
 
     if (cmdMode){
-      if (readOnly) return;
       if (["Shift","Control","Alt","Meta"].includes(e.key)) return;
       e.preventDefault();
       const handled = handleCommandKey(e.key);
@@ -1575,12 +1573,10 @@
       return;
     }
 
-    // Block ALL modifying actions in read-only (including star)
-    if (readOnly){
-      return;
-    }
+    // Block modifications in read-only
+    if (readOnly) return;
 
-    if (action === "star"){ toggleStar(id); render(); return; }
+    if (action === "star"){ /* hidden in RO anyway */ return; }
     if (action === "edit"){ editingId = id; render(); return; }
     if (action === "cancel"){ editingId = null; render(); return; }
 
@@ -1608,8 +1604,6 @@
   loadData();
   setCmdMode(false);
   render();
-
-  // Focus only if not read-only
   if (!readOnly) input.focus();
 })();
 </script>
