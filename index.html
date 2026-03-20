@@ -53,8 +53,80 @@
       gap:10px;
       margin:6px 0 10px;
     }
-    .titleRow{display:flex;align-items:center;gap:8px;min-width:0}
-    h1{margin:0;font-size:16px;letter-spacing:.2px;white-space:nowrap}
+
+    .titleRow{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      min-width:0;
+      flex-wrap:wrap; /* allows metadata to wrap if needed on narrow screens */
+    }
+
+    h1{
+      margin:0;
+      font-size:16px;
+      letter-spacing:.2px;
+      white-space:nowrap;
+    }
+
+    /* --- Last sync metadata (subtle) --- */
+    .syncMeta{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      font-family:var(--mono);
+      font-size:10.5px;
+      color:var(--muted);
+      white-space:nowrap;
+      opacity:.92;
+    }
+    .syncLabel{ color:var(--muted); }
+
+    /* desktop input */
+    .syncInput{
+      width:138px;
+      max-width:38vw;
+      padding:2px 6px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:color-mix(in srgb, var(--bg) 78%, transparent);
+      color:var(--text);
+      font-family:var(--mono);
+      font-size:10.5px;
+      outline:none;
+    }
+    .syncInput:focus{
+      border-color:color-mix(in srgb, var(--accent) 45%, var(--line));
+      box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
+    }
+    .syncHint{
+      display:none;
+      color:var(--muted);
+      font-size:9.5px;
+      opacity:.85;
+    }
+    /* show hint only when focused (desktop) */
+    .syncMeta:focus-within .syncHint{ display:inline; }
+
+    /* mobile display-only */
+    .syncText{
+      display:none;
+      padding:2px 6px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:color-mix(in srgb, var(--bg) 78%, transparent);
+      color:var(--muted);
+      font-family:var(--mono);
+      font-size:10.5px;
+      white-space:nowrap;
+    }
+
+    /* On mobile: hide input, show text */
+    @media (max-width:520px){
+      .syncInput{ display:none; }
+      .syncText{ display:inline-flex; }
+      .syncHint{ display:none !important; }
+    }
 
     /* Header count (only shown in mobile read-only mode) */
     .countTop{
@@ -384,8 +456,8 @@
     .iconbtn.chev.hidden{display:none}
 
     /* Display-only tone rules (not editor) */
-    .tone-event { color: var(--accent); }                 /* blue */
-    .tone-priority { color: var(--danger); font-weight:800; } /* red + bold */
+    .tone-event { color: var(--accent); }
+    .tone-priority { color: var(--danger); font-weight:800; }
 
     .sig { opacity:.95; }
     .sig-ph { color: var(--muted); opacity:.65; }
@@ -433,10 +505,8 @@
 
     /* ---------- Mobile Read-only Mode ---------- */
     @media (max-width:520px){
-      /* Hide the entire editor bar in read-only */
       body.roMobile .bar{ display:none; }
 
-      /* Increase readability in read-only */
       body.roMobile .entry{
         font-size:14.5px;
         line-height:1.35;
@@ -461,7 +531,6 @@
         height:15px;
       }
 
-      /* Hide edit + delete in read-only mode (as requested) */
       body.roMobile button[data-action="edit"],
       body.roMobile button[data-action="delete"]{
         display:none !important;
@@ -482,9 +551,20 @@
     <header>
       <div class="titleRow">
         <h1>Action Log</h1>
+
+        <!-- Last Sync (web editable, mobile display-only) -->
+        <div class="syncMeta" aria-label="Last sync completed">
+          <span class="syncLabel">Last sync completed:</span>
+          <input id="lastSyncInput" class="syncInput" type="text" inputmode="numeric"
+                 placeholder="YYYY-MM-DD HH:mm" aria-label="Last sync timestamp" />
+          <span id="lastSyncText" class="syncText">—</span>
+          <span class="syncHint">(TS shortcut)</span>
+        </div>
+
         <span class="cmdBadge" id="cmdBadge" title="Command mode active (Ctrl+; again or Esc to exit)">
           <span class="dot"></span> CMD
         </span>
+
         <span class="countTop" id="countTop"></span>
       </div>
 
@@ -631,13 +711,14 @@
 
 <script>
 (() => {
-  const KEY = "actionLog.v19";
-  const OLD_KEYS = ["actionLog.v18","actionLog.v17","actionLog.v16","actionLog.v15","actionLog.v14","actionLog.v13","actionLog.v12","actionLog.v11","actionLog.v10","actionLog.v9","actionLog.v8","actionLog.v7","actionLog.v6","actionLog.v5","actionLog.v4","actionLog.v3","actionLog.v2","actionLog.v1"];
+  const KEY = "actionLog.v20";
+  const OLD_KEYS = ["actionLog.v19","actionLog.v18","actionLog.v17","actionLog.v16","actionLog.v15","actionLog.v14","actionLog.v13","actionLog.v12","actionLog.v11","actionLog.v10","actionLog.v9","actionLog.v8","actionLog.v7","actionLog.v6","actionLog.v5","actionLog.v4","actionLog.v3","actionLog.v2","actionLog.v1"];
 
   const UI_TODAY_ONLY   = "actionLog.ui.todayOnly";
   const UI_STARRED_ONLY = "actionLog.ui.starredOnly";
   const UI_LIGHT_MODE   = "actionLog.ui.lightMode";         // "1" or "0"
   const UI_MOBILE_RO    = "actionLog.ui.mobileReadOnly";    // "1" or "0"
+  const UI_LAST_SYNC    = "actionLog.ui.lastSyncCompleted"; // string
 
   const SIG_PLACEHOLDER = "·";
   const SIG_PRIORITY = "!";
@@ -698,6 +779,10 @@
   const lightModeToggle = $("lightModeToggle");
   const readOnlyToggle = $("readOnlyToggle");
 
+  // Last sync UI
+  const lastSyncInput = $("lastSyncInput");
+  const lastSyncText = $("lastSyncText");
+
   let items = [];
   let editingId = null;
   let todayOnly = true;
@@ -726,27 +811,32 @@
 
   // ---- Mobile Read-only toggle (mobile only)
   function applyMobileReadOnly(on){
-    // only take effect in mobile viewport
     const active = !!on && isMobileView();
     document.body.classList.toggle("roMobile", active);
-
-    // if turning on, force exit edit mode
     if (active && editingId){
       editingId = null;
       render();
     }
-
-    // keep focus sane
     if (!active) input && input.focus();
   }
   function loadMobileReadOnly(){
-    try{
-      const v = localStorage.getItem(UI_MOBILE_RO);
-      return v === "1";
-    } catch(e){ return false; }
+    try{ return localStorage.getItem(UI_MOBILE_RO) === "1"; } catch(e){ return false; }
   }
   function saveMobileReadOnly(on){
     try{ localStorage.setItem(UI_MOBILE_RO, on ? "1" : "0"); } catch(e){}
+  }
+
+  // ---- Last Sync storage
+  function loadLastSync(){
+    try{ return (localStorage.getItem(UI_LAST_SYNC) || "").trim(); } catch(e){ return ""; }
+  }
+  function saveLastSync(val){
+    try{ localStorage.setItem(UI_LAST_SYNC, (val || "").trim()); } catch(e){}
+  }
+  function setLastSyncUI(val){
+    const v = (val || "").trim();
+    if (lastSyncInput) lastSyncInput.value = v;
+    if (lastSyncText) lastSyncText.textContent = v || "—";
   }
 
   function pad(n){ return String(n).padStart(2,"0"); }
@@ -770,18 +860,32 @@
     const d = new Date();
     return `${fmtDate(d)} ${fmtTime(d)}`;
   }
-  function getActiveTextarea(){
+
+  // active editable field: textarea OR lastSyncInput (web only)
+  function getActiveEditableField(){
     const el = document.activeElement;
-    return (el && el.tagName === "TEXTAREA") ? el : null;
+    if (!el) return null;
+    if (el.tagName === "TEXTAREA") return el;
+    if (el === lastSyncInput && !isMobileView()) return el; // web only editable
+    return null;
   }
-  function insertAtCursor(ta, textToInsert){
-    const value = ta.value ?? "";
-    const start = ta.selectionStart ?? value.length;
-    const end = ta.selectionEnd ?? value.length;
-    ta.value = value.slice(0, start) + textToInsert + value.slice(end);
+
+  function insertAtCursor(el, textToInsert){
+    const value = el.value ?? "";
+    const start = (typeof el.selectionStart === "number") ? el.selectionStart : value.length;
+    const end = (typeof el.selectionEnd === "number") ? el.selectionEnd : value.length;
+    el.value = value.slice(0, start) + textToInsert + value.slice(end);
     const newPos = start + textToInsert.length;
-    ta.selectionStart = ta.selectionEnd = newPos;
-    ta.focus();
+    if (typeof el.selectionStart === "number") el.selectionStart = newPos;
+    if (typeof el.selectionEnd === "number") el.selectionEnd = newPos;
+    el.focus();
+
+    // if writing into lastSyncInput, persist + update mobile display
+    if (el === lastSyncInput){
+      const v = (lastSyncInput.value || "").trim();
+      saveLastSync(v);
+      setLastSyncUI(v);
+    }
   }
 
   // Prefix
@@ -849,7 +953,7 @@
   }
 
   function applyCmdToActive(kind, value){
-    const ta = getActiveTextarea();
+    const ta = document.activeElement && document.activeElement.tagName === "TEXTAREA" ? document.activeElement : null;
     if (!ta) return false;
 
     const text = ta.value;
@@ -1179,7 +1283,7 @@
 
     logEl.innerHTML = html;
 
-    // chevron only if truncated
+    // show chevron only if truncated
     requestAnimationFrame(() => {
       const rows = logEl.querySelectorAll(".entry");
       rows.forEach(row => {
@@ -1251,7 +1355,6 @@
   }
 
   // --------- Event wiring ----------
-  // Panels
   menuBtn.addEventListener("click", toggleMenu);
   menuClose.addEventListener("click", closeMenu);
   helpBtn.addEventListener("click", toggleHelp);
@@ -1268,7 +1371,27 @@
     applyLightMode(isLight);
   });
 
-  // Mobile Read-only (toggle exists only in mobile menu via CSS)
+  // Last sync init
+  setLastSyncUI(loadLastSync());
+
+  // Web-only: save on blur / Enter
+  if (lastSyncInput){
+    lastSyncInput.addEventListener("blur", () => {
+      if (isMobileView()) return;
+      const v = (lastSyncInput.value || "").trim();
+      saveLastSync(v);
+      setLastSyncUI(v);
+    });
+    lastSyncInput.addEventListener("keydown", (e) => {
+      if (isMobileView()) return;
+      if (e.key === "Enter"){
+        e.preventDefault();
+        lastSyncInput.blur();
+      }
+    });
+  }
+
+  // Mobile read-only
   const initialRO = loadMobileReadOnly();
   if (readOnlyToggle) readOnlyToggle.checked = initialRO;
   applyMobileReadOnly(initialRO);
@@ -1281,9 +1404,11 @@
     });
   }
 
-  // If user rotates / resizes, re-apply mobile RO correctly
+  // Re-apply on resize (rotation)
   window.addEventListener("resize", () => {
     applyMobileReadOnly(loadMobileReadOnly());
+    // Keep last sync display in sync (input hidden on mobile anyway)
+    setLastSyncUI(loadLastSync());
   });
 
   // Filters
@@ -1376,12 +1501,12 @@
     const isMac = navigator.platform.toLowerCase().includes("mac");
     const mod = isMac ? e.metaKey : e.ctrlKey;
 
-    // Insert timestamp into active textarea (new entry or edit textarea)
+    // Insert timestamp into active editable field (textarea OR lastSyncInput on web)
     if (mod && e.shiftKey && (e.key === "T" || e.key === "t")){
-      const ta = getActiveTextarea();
-      if (ta){
+      const el = getActiveEditableField();
+      if (el){
         e.preventDefault();
-        insertAtCursor(ta, fmtNowStamp());
+        insertAtCursor(el, fmtNowStamp());
       }
       return;
     }
@@ -1396,7 +1521,6 @@
     }
 
     if (mod && e.key === "/"){
-      // focus input only if editor visible
       if (!(document.body.classList.contains("roMobile") && isMobileView())){
         e.preventDefault();
         input.focus();
@@ -1477,13 +1601,12 @@
     }
   });
 
-  // ----- Init -----
+  // Init
   loadUI();
   loadData();
   setCmdMode(false);
   render();
 
-  // focus only if editor visible
   if (!(document.body.classList.contains("roMobile") && isMobileView())) input.focus();
 })();
 </script>
